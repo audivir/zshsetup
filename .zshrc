@@ -112,7 +112,7 @@ __init_zshsetup() {
     # BEGIN HOMEBREW
     if [ -f "/opt/homebrew/bin/brew" ]; then
         __source /opt/homebrew/bin/brew shellenv || return 1
-        alias homebrewupdate='brew update && brew upgrade --formulae && brew cu --yes && cd /opt/homebrew && git stash pop &>/dev/null || true && cd -'
+        alias homebrewupdate='brew update; brew upgrade --formulae --yes && brew cu --yes && cd /opt/homebrew && git stash pop &>/dev/null || true && cd -'
     fi
     # END HOMEBREW
 
