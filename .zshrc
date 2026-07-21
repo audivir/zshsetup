@@ -113,8 +113,11 @@ __init_zshsetup() {
     if [ -f "/opt/homebrew/bin/brew" ]; then
         __source /opt/homebrew/bin/brew shellenv || return 1
         alias homebrewupdate='brew update; brew upgrade --formulae --yes && brew cu --yes && cd /opt/homebrew && git stash pop &>/dev/null || true && cd -'
+    else
+        alias gawk="awk"
     fi
     # END HOMEBREW
+    alias showhist="gawk -F'[:;]' '\$2 ~ /^[[:space:]]*[0-9]+$/ {cmd=\$0; sub(/^: [0-9]+:0;/,\"\",cmd); print \": \" strftime(\"%Y-%m-%d %H:%M:%S\",\$2) \":0;\" cmd; next} {print}' \"$HISTFILE\""
 
     PATH="$XDG_BIN_HOME:$HOME/bin:$PATH"
 
