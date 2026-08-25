@@ -1,0 +1,9 @@
+# Changes here will be overwritten by Copier
+_commit: 1a45ad8
+_src_path: gh:audivir/copier-template
+description: Cross-platform zsh dotfiles and package-manager bootstrap scripts
+github_org: audivir
+project_name: zshrc
+project_slug: zshrc
+project_type: shell
+publishable: false

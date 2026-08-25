@@ -4,7 +4,7 @@
 # ruff: noqa: E501,EM103,FURB171,N804,RET504,RUF005,RUF012
 # ruff: noqa: S101,S603,S607,SIM102,SIM115
 # ruff: noqa: PERF203,PERF401,PIE810
-# ruff: noqa: PGH003,PLR0912,PLR0913,PLR0915,PLR2004,PLW2901,PTH119,PTH123
+# ruff: noqa: PGH003,PLR0912,PLR0913,PLR0915,PLR0917,PLR2004,PLW2901,PTH119,PTH123
 # ruff: noqa: T201,TC003,TRY004,TRY201
 from __future__ import annotations
 
@@ -1334,7 +1334,7 @@ class TerminalMenu:
                 string_parts = []
                 string_len = 0
                 while string:
-                    regular_text_match = limit_string_with_escape_codes.regular_text_regex.match(
+                    regular_text_match = limit_string_with_escape_codes.regular_text_regex.match(  # type: ignore[attr-defined]
                         string
                     )  # type: ignore
                     if regular_text_match is not None:

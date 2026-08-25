@@ -3,6 +3,7 @@
 # ruff: noqa: S603,S607
 from __future__ import annotations
 
+import argparse
 import os
 import platform
 import subprocess
@@ -88,20 +89,35 @@ def package_manager(manual_pkg: str, brew_pkg: str, apt_pkg: str) -> None:  # no
         subprocess.check_call([postinstall_script])
 
 
-def main() -> None:
+class Namespace(argparse.Namespace):
+    """Typed namespace for the parsed CLI arguments."""
+
+    manual_pkg: str
+    brew_pkg: str
+    apt_pkg: str
+
+
+def parse_args(argv: list[str]) -> Namespace:
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description="Select a package manager and install a utility.")
+    parser.add_argument(
+        "manual_pkg", help="name of the manual install script in packages/ (without .sh)"
+    )
+    parser.add_argument("brew_pkg", help="Homebrew package name, empty string to disable brew")
+    parser.add_argument("apt_pkg", help="APT package name, empty string to disable apt")
+    return parser.parse_args(argv, namespace=Namespace())
+
+
+def main() -> int:
     """Main entrypoint for the CLI."""
-    # TODO(tihoph): use ArgumentParser?
-    if len(sys.argv) < 4:  # noqa: PLR2004
-        raise ValueError("Not enough arguments")
-    manual_pkg = sys.argv[1]
-    brew_pkg = sys.argv[2]
-    apt_pkg = sys.argv[3]
-    package_manager(manual_pkg, brew_pkg, apt_pkg)
+    args = parse_args(sys.argv[1:])
+    try:
+        package_manager(args.manual_pkg, args.brew_pkg, args.apt_pkg)
+    except Exception as e:  # noqa: BLE001
+        eprint(e)
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        eprint(e)
-        raise SystemExit(1) from e
+    raise SystemExit(main())
