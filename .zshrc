@@ -6,6 +6,32 @@
 export ZSHSETUP_REPO="https://github.com/audivir/zshrc"
 export ZSHSETUP_HOME="$HOME/.config/zshsetup"
 
+rm() {
+    local arg root mounts
+
+    for arg in "$@"; do
+        [[ "$arg" == -* || "$arg" == "--" ]] && continue
+
+        root=$(realpath -e -- "$arg") || {
+            printf 'rm: cannot resolve %q\n' "$arg" >&2
+            return 1
+        }
+
+        mounts=$(findmnt -rn -o TARGET |
+            awk -v root="$root" '
+                $0 == root || (root != "/" && index($0, root "/") == 1)
+            ')
+
+        if [[ -n "$mounts" ]]; then
+            printf 'rm: refusing to remove %q; mounted filesystem(s):\n%s\n' \
+                "$arg" "$mounts" >&2
+            return 1
+        fi
+    done
+
+    /bin/rm "$@"
+}
+
 __eprint() {
     echo "$1" >&2
     return 1
