@@ -3,7 +3,7 @@
 # shellcheck disable=SC1091
 # expect $USER and $HOME to be set
 
-export ZSHSETUP_REPO="https://github.com/audivir/zshrc"
+export ZSHSETUP_REPO="https://github.com/audivir/zshsetup"
 export ZSHSETUP_HOME="$HOME/.config/zshsetup"
 
 rm() {
