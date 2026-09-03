@@ -1,18 +1,17 @@
 #!/usr/bin/env sh
-
 _LINUX_WARNING=0
 # macOS: check dark mode
 _is_dark_darwin() {
   defaults read -g AppleInterfaceStyle >/dev/null 2>&1
 }
 
-# Linux: not yet implemented
+# Linux: not yet implemented, falls back to time of day
 _is_dark_linux() {
  if [ "$_LINUX_WARNING" -eq 0 ]; then
-   echo "Dark mode checking for Linux is not yet implemented. Defaulting to dark mode." >&2
+   echo "Dark mode checking for Linux is not yet implemented. Defaulting to time of day." >&2
    _LINUX_WARNING=1
  fi
- return 0
+ _is_time_for_dark
 }
 
 # Detect dark mode
@@ -31,15 +30,15 @@ _is_dark() {
         _is_dark_linux
          ;;
       *)
-        return 0 # default dark
+        _is_dark_linux
         ;;
     esac
   fi
 }
 
-# Set LC_THEME based on _is_dark
+# Set LC_THEME to dark if input is true
 _set_theme() {
-  if _is_dark; then
+  if [ "$1" -eq 0 ]; then
     LC_THEME="dark"
   else
     LC_THEME="light"
@@ -47,14 +46,28 @@ _set_theme() {
   export LC_THEME
 }
 
-# Update theme only if local (not SSH)
+# Detect local night time (19-7 => dark)
+_is_time_for_dark() {
+  _hour=$(date +%H)
+  _hour=${_hour#0}
+  _hour=${_hour:-0}
+  [ "$_hour" -lt 7 ] || [ "$_hour" -gt 19 ]
+}
+
+# Update theme:
+# locally: detect dark mode
+# over SSH: keep the forwarded LC_THEME, falling back to time of day if unset
 _update_theme() {
   if [ -z "$SSH_CONNECTION" ]; then
-    _set_theme
+    _is_dark
+    _set_theme "$?"
+  elif [ -z "$LC_THEME" ]; then
+    _is_time_for_dark
+    _set_theme "$?"
   fi
 }
 
-# Helper: check if current theme is light
+# Check if current theme is light
 _use_light_theme() {
   _update_theme
   [ "$LC_THEME" = "light" ]
@@ -71,7 +84,7 @@ while IFS='|' read -r _app _light _dark _template; do
   [ -z "$_app" ] && continue
 
   # skip if app is not installed
-  if ! which "$_app" >/dev/null; then
+  if ! command -v "$_app" >/dev/null; then
       echo "$_app not found, cannot create themed functions" >&2
       continue
   fi
