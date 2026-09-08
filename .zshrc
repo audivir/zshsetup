@@ -7,24 +7,47 @@ export ZSHSETUP_REPO="https://github.com/audivir/zshsetup"
 export ZSHSETUP_HOME="$HOME/.config/zshsetup"
 
 rm() {
-    local arg root mounts
+    local arg root mounts after_options
+
+    after_options=false
 
     for arg in "$@"; do
-        [[ "$arg" == -* || "$arg" == "--" ]] && continue
+        if ! $after_options; then
+            case "$arg" in
+                --)
+                    after_options=true
+                    continue
+                    ;;
+                -*)
+                    continue
+                    ;;
+            esac
+        fi
 
-        root=$(realpath -e -- "$arg") || {
+        [[ -e "$arg" || -L "$arg" ]] || continue
+
+        root=$(realpath "$arg") || {
             printf 'rm: cannot resolve %q\n' "$arg" >&2
             return 1
         }
 
-        mounts=$(findmnt -rn -o TARGET |
-            awk -v root="$root" '
-                $0 == root || (root != "/" && index($0, root "/") == 1)
-            ')
+        # Fetch all mount targets depending on the OS, then pipe to the shared awk filter
+        mounts=$(
+            {
+                if command -v findmnt >/dev/null 2>&1; then
+                    findmnt -rn -o TARGET
+                else
+                    mount | awk 'match($0, / on \/.* \(/) { print substr($0, RSTART+4, RLENGTH-6) }'
+                fi
+            } | awk -v root="$root" '
+                $0 == root ||
+                (root != "/" && index($0, root "/") == 1)
+            '
+        )
 
         if [[ -n "$mounts" ]]; then
-            printf 'rm: refusing to remove %q; mounted filesystem(s):\n%s\n' \
-                "$arg" "$mounts" >&2
+            printf 'rm: refusing to remove %q\n' "$arg" >&2
+            printf 'rm: mounted filesystem(s):\n%s\n' "$mounts" >&2
             return 1
         fi
     done
