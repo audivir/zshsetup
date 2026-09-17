@@ -223,6 +223,10 @@ __init_zshsetup() {
     if ! __available micro --help; then
         __package_manager micro micro micro || return 1
     fi
+
+    if ! __available kv --help; then
+        __package_manager kv "" "" || return 1
+    fi
     # END EXTRA TOOLS
 
     # BEGIN ALIASES
@@ -274,7 +278,7 @@ __update_zshsetup() {
     git stash pop || __eprint "Failed to reapply local changes"
     popd || true
 
-    packages=(jq micromamba go rustup uv uvc bat micro)
+    packages=(jq micromamba go rustup uv uvc bat micro kv)
     for p in "${packages[@]}"; do
         "$ZSHSETUP_HOME/packages/$p.sh" upgrade
     done

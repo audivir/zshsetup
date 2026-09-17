@@ -78,6 +78,7 @@ _use_light_theme() {
 THEMEABLE_APPS="
 micro|sunny-day|one-dark|micro --colorscheme
 bat|Monokai Extended Light|Monokai Extended|bat --theme
+kv|light|dark|kv --theme
 "
 
 while IFS='|' read -r _app _light _dark _template; do
