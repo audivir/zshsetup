@@ -225,7 +225,7 @@ __init_zshsetup() {
     fi
 
     if ! __available kv --help; then
-        __package_manager kv "" "" || return 1
+        __package_manager kv kv kv || return 1
     fi
     # END EXTRA TOOLS
 
