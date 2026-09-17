@@ -17,7 +17,7 @@ check() {
 fetch() {
     local url
     url="https://api.github.com/repos/rust-lang/rustup/tags"
-    curl --fail-with-body -L "$url" | jq -r '.[0].name'
+    curl --fail-with-body -sL "$url" | jq -r '.[0].name'
 }
 
 # install the most recent version
