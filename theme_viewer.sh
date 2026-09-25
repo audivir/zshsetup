@@ -73,8 +73,8 @@ while IFS='|' read -r _app _light _dark _template; do
 
   # skip if app is not installed
   if ! command -v "$_app" >/dev/null; then
-      echo "$_app not found, cannot create themed functions" >&2
-      continue
+    echo "$_app not found, cannot create themed functions" >&2
+    continue
   fi
 
   eval "\

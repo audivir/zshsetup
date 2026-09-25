@@ -22,17 +22,17 @@ fetch() {
 
 # install the most recent version
 install() {
-    local version url
-    version="$1"
-    set_os_arch "linux" "64" "linux" "-arm64" "osx" "" "macos" "-arm64"
-    url="https://github.com/micro-editor/micro/releases/download/v$version/micro-$version-$os$arch.tar.gz"
-    tmpfile="$(mktemp)"
-    trap 'rm -f "$tmpfile"' EXIT INT TERM
-    curl --fail-with-body -L "$url" | tar -xO "micro-$version/micro" >"$tmpfile"
-    chmod +x "$tmpfile"
-    mv "$tmpfile" "$XDG_BIN_HOME/micro"
-    rm -f "$tmpfile"
-    trap - EXIT INT TERM
+  local version url
+  version="$1"
+  set_os_arch "linux" "64" "linux" "-arm64" "osx" "" "macos" "-arm64"
+  url="https://github.com/micro-editor/micro/releases/download/v$version/micro-$version-$os$arch.tar.gz"
+  tmpfile="$(mktemp)"
+  trap 'rm -f "$tmpfile"' EXIT INT TERM
+  curl --fail-with-body -L "$url" | tar -xO "micro-$version/micro" >"$tmpfile"
+  chmod +x "$tmpfile"
+  mv "$tmpfile" "$XDG_BIN_HOME/micro"
+  rm -f "$tmpfile"
+  trap - EXIT INT TERM
 }
 
 # uninstall the installed package
