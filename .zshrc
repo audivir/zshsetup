@@ -7,9 +7,10 @@ export ZSHSETUP_REPO="https://github.com/audivir/zshsetup"
 export ZSHSETUP_HOME="$HOME/.config/zshsetup"
 
 rm() {
-    local arg root mounts after_options
+    local arg root mounts target hits after_options
 
     after_options=false
+    mounts=""
 
     for arg in "$@"; do
         if ! $after_options; then
@@ -31,23 +32,27 @@ rm() {
             return 1
         }
 
-        # Fetch all mount targets depending on the OS, then pipe to the shared awk filter
-        mounts=$(
-            {
+        # Fetch all mount targets once depending on the OS
+        if [[ -z "$mounts" ]]; then
+            mounts=$(
                 if command -v findmnt >/dev/null 2>&1; then
                     findmnt -rn -o TARGET
                 else
                     mount | awk 'match($0, / on \/.* \(/) { print substr($0, RSTART+4, RLENGTH-6) }'
                 fi
-            } | awk -v root="$root" '
-                $0 == root ||
-                (root != "/" && index($0, root "/") == 1)
-            '
-        )
+            )
+        fi
 
-        if [[ -n "$mounts" ]]; then
+        hits=""
+        while IFS= read -r target; do
+            if [[ "$target" == "$root" || ( "$root" != "/" && "$target" == "$root"/* ) ]]; then
+                hits+="$target"$'\n'
+            fi
+        done <<<"$mounts"
+
+        if [[ -n "$hits" ]]; then
             printf 'rm: refusing to remove %q\n' "$arg" >&2
-            printf 'rm: mounted filesystem(s):\n%s\n' "$mounts" >&2
+            printf 'rm: mounted filesystem(s):\n%s' "$hits" >&2
             return 1
         fi
     done
