@@ -284,13 +284,13 @@ __init_zshsetup() {
   export PYTHON_HISTORY="$XDG_DATA_HOME/python/python_history"
   # END ENVIRONMENT
 
+  # typeset -U only deduplicates array assignments, not PATH="...:$PATH"
+  path=("${path[@]}")
   export PATH
 
   # BEGIN THEME VIEWER
   . "$ZSHSETUP_HOME/theme_viewer.sh" || return 1
   # END THEME VIEWER
-  # typeset -U only deduplicates array assignments, not PATH="...:$PATH"
-  path=("${path[@]}")
 }
 
 __install_zshsetup() {
