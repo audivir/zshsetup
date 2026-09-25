@@ -215,6 +215,17 @@ __init_zshsetup() {
     __source command uvc shell zsh || return 1
     # END PYTHON
 
+    # BEGIN JAVASCRIPT
+    export BUN_INSTALL="$XDG_DATA_HOME/bun"
+    export BUN_INSTALL_CACHE_DIR="$XDG_CACHE_HOME/bun/install"
+    export BUN_RUNTIME_TRANSPILER_CACHE_PATH="$XDG_CACHE_HOME/bun/runtime"
+    export BUN_CONFIG_DIR="$XDG_CONFIG_HOME/bun"
+    PATH="$BUN_INSTALL/bin:$PATH"
+    if ! __available bun --help; then
+        __package_manager bun bun ""
+    fi
+    # END JAVASCRIPT
+
     # BEGIN EXTRA TOOLS
     if ! __available bat --help; then
         __package_manager bat bat bat || return 1
@@ -278,7 +289,7 @@ __update_zshsetup() {
     git stash pop || __eprint "Failed to reapply local changes"
     popd || true
 
-    packages=(jq micromamba go rustup uv uvc bat micro kv)
+    packages=(jq micromamba go rustup uv uvc bun bat micro kv)
     for p in "${packages[@]}"; do
         "$ZSHSETUP_HOME/packages/$p.sh" upgrade
     done
