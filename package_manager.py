@@ -1,4 +1,4 @@
-"""CLI to select a package manager and install an utility."""
+"""CLI for installing a utility with a user-selected package manager."""
 
 # ruff: noqa: S603,S607
 from __future__ import annotations
@@ -23,12 +23,12 @@ ManagerT: TypeAlias = Literal["brew", "apt", "manual"]
 
 
 def eprint(*args: Any) -> None:
-    """Print to stderr."""
+    """Prints to stderr."""
     print(*args, file=sys.stderr)  # noqa: T201
 
 
 def create_menu(*options: ManagerT) -> ManagerT | None:
-    """Create a terminal menu and return the choice or None if cancelled."""
+    """Returns the package manager from the environment or a terminal menu, or None if cancelled."""
     if choice := os.getenv(ENV_VAR_NAME):
         if choice in options:
             return choice  # type: ignore[return-value]
@@ -43,7 +43,7 @@ def create_menu(*options: ManagerT) -> ManagerT | None:
 
 
 def package_manager(manual_pkg: str, brew_pkg: str, apt_pkg: str) -> None:  # noqa: C901,PLR0912
-    """Install a package over a user-selected installation way."""
+    """Installs a package with the user-selected package manager."""
     if not manual_pkg:
         raise ValueError("No package name provided")
     manual_script = PACKAGES / f"{manual_pkg}.sh"
@@ -90,7 +90,7 @@ def package_manager(manual_pkg: str, brew_pkg: str, apt_pkg: str) -> None:  # no
 
 
 class Namespace(argparse.Namespace):
-    """Typed namespace for the parsed CLI arguments."""
+    """Stores the parsed CLI arguments."""
 
     manual_pkg: str
     brew_pkg: str
@@ -98,7 +98,7 @@ class Namespace(argparse.Namespace):
 
 
 def parse_args(argv: list[str]) -> Namespace:
-    """Parse command line arguments."""
+    """Parses command line arguments."""
     parser = argparse.ArgumentParser(description="Select a package manager and install a utility.")
     parser.add_argument(
         "manual_pkg", help="name of the manual install script in packages/ (without .sh)"
@@ -109,7 +109,7 @@ def parse_args(argv: list[str]) -> Namespace:
 
 
 def main() -> int:
-    """Main entrypoint for the CLI."""
+    """Runs the CLI and returns the exit code."""
     args = parse_args(sys.argv[1:])
     try:
         package_manager(args.manual_pkg, args.brew_pkg, args.apt_pkg)
