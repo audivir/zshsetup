@@ -328,7 +328,13 @@ __update_zshsetup() {
     "$ZSHSETUP_HOME/packages/$p.sh" upgrade
   done
 
-  omz update
+  # omz only exists once oh-my-zsh is sourced, so run its upgrade script directly
+  local omz_dir
+  omz_dir="${ZSH:-$ZSHSETUP_HOME/oh-my-zsh}"
+  ZSH="$omz_dir" zsh -f "$omz_dir/tools/upgrade.sh" -v default || __eprint "Failed to update oh-my-zsh"
+  # keeps oh-my-zsh from asking to update again, like omz update does
+  zmodload zsh/datetime
+  echo "LAST_EPOCH=$((EPOCHSECONDS / 60 / 60 / 24))" >|"${ZSH_CACHE_DIR:-$omz_dir/cache}/.zsh-update"
 }
 
 __uninstall_manual() {
