@@ -27,10 +27,13 @@ rm() {
 
         [[ -e "$arg" || -L "$arg" ]] || continue
 
-        root=$(realpath "$arg") || {
-            printf 'rm: cannot resolve %q\n' "$arg" >&2
-            return 1
-        }
+        # rm deletes a symlink itself, so only its parent directory is resolved
+        if [[ -L "$arg" && "$arg" != */ ]]; then
+            root="${arg:h:A}"
+            root="${root%/}/${arg:t}"
+        else
+            root="${arg:A}"
+        fi
 
         # Fetch all mount targets once depending on the OS
         if [[ -z "$mounts" ]]; then
@@ -98,6 +101,7 @@ __source() {
   eval "$env"
 }
 
+# looks up the executable without running it, ignoring functions and aliases
 __available() {
     whence -p "$1" &>/dev/null
 }
