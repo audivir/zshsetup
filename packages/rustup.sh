@@ -23,17 +23,23 @@ fetch() {
 # install the most recent version
 install() {
     curl --fail-with-body -L "https://sh.rustup.rs" | sh -s -- \
-        --default-toolchain "nightly-2026-01-28" \
+        --default-toolchain "${ZSHSETUP_RUST_TOOLCHAIN:-stable}" \
         --no-update-default-toolchain \
         --no-modify-path -y
 }
 
-# uninstall the installed package
+# upgrade rustup in place, since uninstall would also remove all toolchains
+upgrade() {
+    if [ -z "$(check)" ]; then
+        echo "$name is not installed manually, update via package manager" >&2
+        exit 0
+    fi
+    "$local_bin" self update
+}
+
+# uninstall the installed package, including all toolchains and cargo binaries
 uninstall() {
-    rm "$local_bin"
+    "$local_bin" self uninstall -y
 }
 
 main "$name" "$@"
-#!/usr/bin/env zsh
-# shellcheck shell=bash
-set -euo pipefail
