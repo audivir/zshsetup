@@ -6,9 +6,9 @@
 export ZSHSETUP_REPO="https://github.com/audivir/zshsetup"
 export ZSHSETUP_HOME="$HOME/.config/zshsetup"
 
-# drop duplicate PATH entries, e.g. when .zshrc is sourced again
+# drop duplicate PATH and FPATH entries, e.g. when .zshrc is sourced again
 # shellcheck disable=SC2034
-typeset -U path
+typeset -U path fpath
 
 rm() {
   local arg root mounts target hits after_options
