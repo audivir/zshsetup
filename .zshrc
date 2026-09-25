@@ -162,13 +162,24 @@ __init_zshsetup() {
     if [ -f "/opt/homebrew/bin/brew" ]; then
         __source /opt/homebrew/bin/brew shellenv || return 1
         alias homebrewupdate='brew update; brew upgrade --formulae --yes && brew cu --yes && cd /opt/homebrew && git stash pop &>/dev/null || true && cd -'
-    else
-        alias gawk="awk"
     fi
     # END HOMEBREW
-    alias showhist="gawk -F'[:;]' '\$2 ~ /^[[:space:]]*[0-9]+$/ {cmd=\$0; sub(/^: [0-9]+:0;/,\"\",cmd); print \": \" strftime(\"%Y-%m-%d %H:%M:%S\",\$2) \":0;\" cmd; next} {print}' \"$HISTFILE\""
 
     PATH="$XDG_BIN_HOME:$HOME/bin:$PATH"
+
+    # BEGIN GAWK
+    if ! __available gawk --version; then
+        # zig and make are only needed to build gawk from source
+        if ! __available cc --version && ! __available zig version; then
+            __package_manager zig zig "" || return 1
+        fi
+        if ! __available make --version; then
+            __package_manager make "" make || return 1
+        fi
+        __package_manager gawk gawk gawk || return 1
+    fi
+    alias showhist="gawk -F'[:;]' '\$2 ~ /^[[:space:]]*[0-9]+$/ {cmd=\$0; sub(/^: [0-9]+:0;/,\"\",cmd); print \": \" strftime(\"%Y-%m-%d %H:%M:%S\",\$2) \":0;\" cmd; next} {print}' \"$HISTFILE\""
+    # END GAWK
 
     # BEGIN JQ
     if ! __available jq --help; then
@@ -289,7 +300,7 @@ __update_zshsetup() {
     git stash pop || __eprint "Failed to reapply local changes"
     popd || true
 
-    packages=(jq micromamba go rustup uv uvc bun bat micro kv)
+    packages=(zig make gawk jq micromamba go rustup uv uvc bun bat micro kv)
     for p in "${packages[@]}"; do
         "$ZSHSETUP_HOME/packages/$p.sh" upgrade
     done
