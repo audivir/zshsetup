@@ -83,3 +83,5 @@ repos:
     hooks:
       - id: shellcheck
         files: ^(\.zshrc|\.bashrc|\.env|.*\.sh)$
+        # the hook excludes zsh scripts by default, which covers every script here
+        exclude_types: []

@@ -178,7 +178,9 @@ __init_zshsetup() {
         fi
         __package_manager gawk gawk gawk || return 1
     fi
-    alias showhist="gawk -F'[:;]' '\$2 ~ /^[[:space:]]*[0-9]+$/ {cmd=\$0; sub(/^: [0-9]+:0;/,\"\",cmd); print \": \" strftime(\"%Y-%m-%d %H:%M:%S\",\$2) \":0;\" cmd; next} {print}' \"$HISTFILE\""
+    showhist() {
+        gawk -F'[:;]' '$2 ~ /^[[:space:]]*[0-9]+$/ {cmd=$0; sub(/^: [0-9]+:0;/,"",cmd); print ": " strftime("%Y-%m-%d %H:%M:%S",$2) ":0;" cmd; next} {print}' "$HISTFILE"
+    }
     # END GAWK
 
     # BEGIN JQ
