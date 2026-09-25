@@ -152,14 +152,9 @@ __init_zshsetup() {
   if [ ! -d "$ZSH" ]; then
     "$ZSHSETUP_HOME/packages/oh-my-zsh.sh" || return 1
   fi
-  local plugin_dir
+  # oh-my-zsh bundles zsh-autosuggestions and zsh-syntax-highlighting itself
+  # shellcheck disable=SC2034
   plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
-  for plugin in "${plugins[@]}"; do
-    plugin_dir="$ZSH/plugins/$plugin"
-    if [ ! -d "$plugin_dir" ]; then
-      git clone "https://github.com/zsh-users/$plugin" "$plugin_dir" || return 1
-    fi
-  done
   ZSH_CACHE="$XDG_CACHE_HOME/zsh"
   __assure_dir "$ZSH_CACHE" || return 1
   # shellcheck disable=SC2034
