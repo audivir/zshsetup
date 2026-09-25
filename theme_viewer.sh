@@ -7,32 +7,19 @@ _is_dark_darwin() {
 
 # Linux: not yet implemented, falls back to time of day
 _is_dark_linux() {
- if [ "$_LINUX_WARNING" -eq 0 ]; then
-   echo "Dark mode checking for Linux is not yet implemented. Defaulting to time of day." >&2
-   _LINUX_WARNING=1
- fi
- _is_time_for_dark
+  if [ "$_LINUX_WARNING" -eq 0 ]; then
+    echo "Dark mode checking for Linux is not yet implemented. Defaulting to time of day." >&2
+    _LINUX_WARNING=1
+  fi
+  _is_time_for_dark
 }
 
 # Detect dark mode
 _is_dark() {
-  _desktop=""
-
   if [ "$(uname)" = "Darwin" ]; then
     _is_dark_darwin
   else
-    _desktop=$(echo "${XDG_CURRENT_DESKTOP:-}" | tr '[:upper:]' '[:lower:]')
-    case "$_desktop" in
-      *gnome*)
-        _is_dark_linux
-        ;;
-      *kde*)
-        _is_dark_linux
-         ;;
-      *)
-        _is_dark_linux
-        ;;
-    esac
+    _is_dark_linux
   fi
 }
 
@@ -51,7 +38,7 @@ _is_time_for_dark() {
   _hour=$(date +%H)
   _hour=${_hour#0}
   _hour=${_hour:-0}
-  [ "$_hour" -lt 7 ] || [ "$_hour" -gt 19 ]
+  [ "$_hour" -lt 7 ] || [ "$_hour" -ge 19 ]
 }
 
 # Update theme:
