@@ -134,9 +134,6 @@ or keep it with:
 }
 
 __init_zshsetup() {
-  local uid
-  uid="$(id -u)"
-
   __init_cache || return 1
 
   export LOCAL_HOME="$HOME/.local"
@@ -144,8 +141,16 @@ __init_zshsetup() {
   export XDG_DATA_HOME="$LOCAL_HOME/share"
   export XDG_BIN_HOME="$LOCAL_HOME/bin"
   export XDG_CACHE_HOME="$CACHE_DIR"
-  export XDG_RUNTIME_DIR="/run/user/$uid"
   export XDG_STATE_HOME="$LOCAL_HOME/state"
+  # systemd sets it on Linux, and macOS has no equivalent besides the per-user TMPDIR
+  # an inherited value is replaced when its directory does not exist
+  if [ ! -d "$XDG_RUNTIME_DIR" ]; then
+    if [ -d "/run/user/$UID" ]; then
+      export XDG_RUNTIME_DIR="/run/user/$UID"
+    elif [[ "$OSTYPE" == darwin* ]] && [ -n "$TMPDIR" ]; then
+      export XDG_RUNTIME_DIR="${TMPDIR%/}"
+    fi
+  fi
 
   for dir in "$LOCAL_HOME" "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_BIN_HOME" "$XDG_CACHE_HOME" "$XDG_STATE_HOME"; do
     __assure_dir "$dir" || return 1
