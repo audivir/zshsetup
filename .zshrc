@@ -104,7 +104,7 @@ __init_cache() {
     local user_cache scratch_cache
     user_cache="$HOME/.cache"
     scratch_cache="/scratch/$USER/.cache"
-    # if /home if mounted, look for /scratch to use as cache directory
+    # if /home is mounted, look for /scratch to use as cache directory
     if [ -z "$ZSHSETUP_IGNORESCRATCH" ] && [ -d "/scratch" ]; then
         __assure_dir "$scratch_cache" || return 1
         __assure_link "$user_cache" "$scratch_cache" || return 1
@@ -148,7 +148,7 @@ __init_zshsetup() {
     ZSH_CACHE="$XDG_CACHE_HOME/zsh"
     __assure_dir "$ZSH_CACHE" || return 1
     # shellcheck disable=SC2034
-    ZSH_COMPDUMP="$ZSH_CACHE/zcompdump-${SHORT_HOST}-${ZSH_VERSION}"
+    ZSH_COMPDUMP="$ZSH_CACHE/zcompdump-${HOST%%.*}-${ZSH_VERSION}"
     # shellcheck disable=SC2034
     ZSH_CUSTOM="$ZSH/custom"
     # shellcheck disable=SC2034
