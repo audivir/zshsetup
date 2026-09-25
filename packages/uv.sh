@@ -36,7 +36,7 @@ install() {
 
 # uninstall the installed package
 uninstall() {
-    rm "$local_bin"
+    rm "$local_bin" "$XDG_BIN_HOME/uvx"
 }
 
 main "$name" "$@"
