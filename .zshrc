@@ -6,6 +6,10 @@
 export ZSHSETUP_REPO="https://github.com/audivir/zshsetup"
 export ZSHSETUP_HOME="$HOME/.config/zshsetup"
 
+# drop duplicate PATH entries, e.g. when .zshrc is sourced again
+# shellcheck disable=SC2034
+typeset -U path
+
 rm() {
   local arg root mounts target hits after_options
 
@@ -280,6 +284,8 @@ __init_zshsetup() {
   # BEGIN THEME VIEWER
   . "$ZSHSETUP_HOME/theme_viewer.sh" || return 1
   # END THEME VIEWER
+  # typeset -U only deduplicates array assignments, not PATH="...:$PATH"
+  path=("${path[@]}")
 }
 
 __install_zshsetup() {
