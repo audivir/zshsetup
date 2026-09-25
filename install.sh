@@ -26,4 +26,4 @@ if ! __available zsh --help; then
     fi
 fi
 
-curl --fail-with-body -L https://github.com/audivir/zshrc/raw/refs/heads/main/.zshrc | zsh -s -- install
+curl --fail-with-body -L https://github.com/audivir/zshsetup/raw/refs/heads/main/.zshrc | zsh -s -- install
