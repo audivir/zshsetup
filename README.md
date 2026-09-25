@@ -48,6 +48,7 @@ Environment variables:
 
 - `ZSHSETUP_CHOICE`: default package manager (`brew`, `apt`, or `manual`) instead of the menu.
 - `ZSHSETUP_IGNORESCRATCH`: do not move the cache directory to `/scratch/$USER/.cache`.
+  A `~/.cache/.zshsetup_do_not_use_scratch` file does the same.
 - `ZSHSETUP_RUST_TOOLCHAIN`: default toolchain for a manual `rustup` install (`stable` if unset).
 
 ## License

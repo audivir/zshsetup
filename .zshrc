@@ -111,7 +111,16 @@ __init_cache() {
   user_cache="$HOME/.cache"
   scratch_cache="/scratch/$USER/.cache"
   # if /home is mounted, look for /scratch to use as cache directory
-  if [ -z "$ZSHSETUP_IGNORESCRATCH" ] && [ -d "/scratch" ]; then
+  if [ -z "$ZSHSETUP_IGNORESCRATCH" ] && [ -d "/scratch" ] \
+    && [ ! -f "$user_cache/.zshsetup_do_not_use_scratch" ]; then
+    if [ -d "$user_cache" ] && [ ! -L "$user_cache" ]; then
+      __eprint "zshsetup stopped: /scratch exists, but $user_cache is a directory.
+Move it to /scratch with:
+  mkdir -p ${scratch_cache:h} && mv $user_cache $scratch_cache
+or keep it with:
+  touch $user_cache/.zshsetup_do_not_use_scratch"
+      return 1
+    fi
     __assure_dir "$scratch_cache" || return 1
     __assure_link "$user_cache" "$scratch_cache" || return 1
     CACHE_DIR="$scratch_cache"
