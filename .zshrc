@@ -199,7 +199,12 @@ __init_zshsetup() {
     __package_manager gawk gawk gawk || return 1
   fi
   showhist() {
-    gawk -F'[:;]' '$2 ~ /^[[:space:]]*[0-9]+$/ {cmd=$0; sub(/^: [0-9]+:0;/,"",cmd); print ": " strftime("%Y-%m-%d %H:%M:%S",$2) ":0;" cmd; next} {print}' "$HISTFILE"
+    # zsh stores non-ASCII history as metafied bytes, which are no valid UTF-8
+    LC_ALL=C gawk 'match($0, /^: ([0-9]+):([0-9]+);/, m) {
+      print strftime("%Y-%m-%d %H:%M:%S", m[1]) ":" m[2] ";" substr($0, RLENGTH + 1)
+      next
+    }
+    { print }' "$HISTFILE"
   }
   # END GAWK
 
