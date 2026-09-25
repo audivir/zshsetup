@@ -233,7 +233,7 @@ __init_zshsetup() {
     export BUN_CONFIG_DIR="$XDG_CONFIG_HOME/bun"
     PATH="$BUN_INSTALL/bin:$PATH"
     if ! __available bun --help; then
-        __package_manager bun bun ""
+        __package_manager bun bun "" || return 1
     fi
     # END JAVASCRIPT
 
@@ -295,9 +295,8 @@ __update_zshsetup() {
     fi
     pushd "$ZSHSETUP_HOME" || return 1
     git fetch || __eprint "Failed to fetch new data from $ZSHSETUP_REPO"
-    git stash || __eprint "Failed to stash local changes"
-    git merge || __eprint "Failed to merge updates"
-    git stash pop || __eprint "Failed to reapply local changes"
+    # only stashes and reapplies when there are local changes
+    git merge --autostash || __eprint "Failed to merge updates"
     popd || true
 
     packages=(zig make gawk jq micromamba go rustup uv uvc bun bat micro kv)
