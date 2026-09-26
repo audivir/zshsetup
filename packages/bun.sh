@@ -22,9 +22,10 @@ fetch() {
 
 # install the most recent version
 install() {
+  require_cmd curl unzip || return 1
   local version url tmpdir
   version="$1"
-  set_os_arch "linux" "x64" "linux" "aarch64" "darwin" "x64" "darwin" "aarch64"
+  set_os_arch "linux" "x64" "linux" "aarch64" "darwin" "aarch64"
   url="https://github.com/oven-sh/bun/releases/download/bun-v$version/bun-$os-$arch.zip"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM

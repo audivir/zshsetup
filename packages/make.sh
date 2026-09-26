@@ -15,6 +15,7 @@ check() {
 
 # fetch the latest version
 fetch() {
+  require_cmd curl || return 1
   curl --fail-with-body -sL "https://ftp.gnu.org/gnu/make/" \
     | grep -o 'make-[0-9.]*\.tar\.gz"' \
     | sed 's/^make-//; s/\.tar\.gz"$//' \
@@ -25,6 +26,7 @@ fetch() {
 # install the most recent version
 # build.sh bootstraps make without an existing make, using the system compiler or zig
 install() {
+  require_cmd curl tar || return 1
   local version url tmpdir cc
   version="$1"
   if 2>/dev/null >/dev/null cc --version; then

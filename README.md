@@ -8,8 +8,9 @@ tools are installed on shell start, either with Homebrew, APT, or a manual insta
 
 ## Prerequisites
 
-- macOS or Linux on x86_64 or arm64
-- `curl`, `git`, and `python3`
+- macOS on arm64, or Linux on x86_64 or arm64
+- `curl`, `git`, `python3`, and `tar`
+- `unzip` (only required when installing `bun`)
 - `zsh` (installed to `~/.local` with [zsh-bin](https://github.com/romkatv/zsh-bin) if missing)
 
 ## Installation
@@ -38,13 +39,34 @@ python3 <(curl --fail-with-body -L https://gist.githubusercontent.com/muendeleza
 
 ## Usage
 
-- `__update_zshsetup` pulls the latest version, upgrades manually installed packages, and
+- `update_zshsetup` pulls the latest version, upgrades manually installed packages, and
   updates oh-my-zsh.
-- `__uninstall_manual <package>...` removes manually installed packages.
+- `install_manual <package>...` installs manually packaged tools.
+- `uninstall_manual <package>...` removes manually installed packages.
+- `edit_zshsetup <pre|post>` edits local configuration files with `$EDITOR` (or `micro`).
 - `showhist` prints the history with readable timestamps.
 - Local changes belong in `preinit.zsh` (before tools and oh-my-zsh) and `postinit.zsh` (after tools and oh-my-zsh).
 
-Environment variables:
+## Packages
+
+The following packages have bootstrap scripts in `packages/`:
+
+- `bat`: `cat` clone with syntax highlighting and Git integration (requires `curl`, `jq`, `tar`)
+- `bun`: Fast all-in-one JavaScript/TypeScript runtime and toolkit (requires `curl`, `jq`, `unzip`)
+- `gawk`: GNU Awk text processing utility (requires `curl`, `make`, `tar`, and `cc` or `zig`)
+- `go`: The Go programming language toolchain (requires `curl`, `tar`)
+- `jq`: Command-line JSON processor (requires `curl`)
+- `kv`: Key-value storage CLI (requires `curl`, `jq`)
+- `make`: GNU Make build automation tool (requires `curl`, `tar`, and `cc` or `zig`)
+- `micro`: Modern terminal-based text editor (requires `curl`, `jq`, `tar`)
+- `micromamba`: Fast standalone conda package manager (requires `curl`, `jq`)
+- `oh-my-zsh`: Community-driven zsh configuration framework (requires `curl`, `git`, `zsh`)
+- `rustup`: Rust toolchain installer (requires `curl`, `jq`)
+- `uv`: Fast Python package and project manager (requires `curl`, `jq`, `tar`)
+- `uvc`: Python command wrapper and cache tool (requires `curl`, `sha256sum`)
+- `zig`: Zig compiler and toolchain (requires `curl`, `tar`)
+
+## Environment Variables
 
 - `ZSHSETUP_CHOICE`: default package manager (`brew`, `apt`, or `manual`) instead of the menu.
 - `ZSHSETUP_IGNORESCRATCH`: do not move the cache directory to `/scratch/$USER/.cache`.

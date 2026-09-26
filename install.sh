@@ -12,6 +12,11 @@ if [ -z "$HOME" ]; then
   exit 1
 fi
 
+if [ "$(uname)" = "Darwin" ] && [ "$(uname -m)" != "arm64" ]; then
+  echo "Only macOS arm64 is supported" >&2
+  exit 1
+fi
+
 if ! __available curl --help || ! __available git --help; then
   echo "curl and git required!"
   exit 1

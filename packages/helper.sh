@@ -2,52 +2,59 @@
 # shellcheck shell=bash
 set -euo pipefail
 
+require_cmd() {
+  local cmd
+  for cmd in "$@"; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+      echo "Required command not found: $cmd (needed by ${name:-package})" >&2
+      return 1
+    fi
+  done
+}
+
 get_latest_github() {
+  require_cmd curl jq || return 1
   local repo
   repo="$1"
   curl --fail-with-body -sL "https://api.github.com/repos/$repo/releases/latest" | jq -r .tag_name
 }
 
 get_latest_crate() {
+  require_cmd curl jq || return 1
   local crate
   crate="$1"
   curl --fail-with-body -sL "https://crates.io/api/v1/crates/$crate" | jq -r .crate.max_stable_version
 }
 
-__set_os_arch() {
-  local amd_os amd_arch arm_os arm_arch
-  arch="$(uname -m)"
-  amd_os="$1"
-  amd_arch="$2"
-  arm_os="$3"
-  arm_arch="$4"
-  if [ "$arch" = "x86_64" ] || [ "$arch" = "amd64" ]; then
-    os="$amd_os"
-    arch="$amd_arch"
-  elif [ "$arch" = "arm64" ] || [ "$arch" = "aarch64" ]; then
-    os="$arm_os"
-    arch="$arm_arch"
-  else
-    echo "Unsupported architecture: $arch" >&2
-    return 1
-  fi
-}
-
 set_os_arch() {
-  local linux_amd_os linux_amd_arch linux_arm_os linux_arm_arch macos_amd_os macos_amd_arch macos_arm_os macos_arm_arch
+  local linux_amd_os linux_amd_arch linux_arm_os linux_arm_arch macos_arm_os macos_arm_arch
   linux_amd_os="$1"
   linux_amd_arch="$2"
   linux_arm_os="$3"
   linux_arm_arch="$4"
-  macos_amd_os="$5"
-  macos_amd_arch="$6"
-  macos_arm_os="$7"
-  macos_arm_arch="$8"
+  macos_arm_os="$5"
+  macos_arm_arch="$6"
   os="$(uname)"
+  arch="$(uname -m)"
   if [ "$os" = "Linux" ]; then
-    __set_os_arch "$linux_amd_os" "$linux_amd_arch" "$linux_arm_os" "$linux_arm_arch"
+    if [ "$arch" = "x86_64" ] || [ "$arch" = "amd64" ]; then
+      os="$linux_amd_os"
+      arch="$linux_amd_arch"
+    elif [ "$arch" = "arm64" ] || [ "$arch" = "aarch64" ]; then
+      os="$linux_arm_os"
+      arch="$linux_arm_arch"
+    else
+      echo "Unsupported architecture: $arch" >&2
+      return 1
+    fi
   elif [ "$os" = "Darwin" ]; then
-    __set_os_arch "$macos_amd_os" "$macos_amd_arch" "$macos_arm_os" "$macos_arm_arch"
+    if [ "$arch" = "arm64" ] || [ "$arch" = "aarch64" ]; then
+      os="$macos_arm_os"
+      arch="$macos_arm_arch"
+    else
+      echo "Unsupported architecture for macOS: $arch (only arm64 is supported)" >&2
+      return 1
+    fi
   else
     echo "Unsupported OS: $os" >&2
     return 1

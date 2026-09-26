@@ -17,9 +17,10 @@ check() {
 
 # fetch the latest version
 fetch() {
+  require_cmd curl || return 1
   local url jq_tmpdir
   if ! jq --help >/dev/null 2>&1; then
-    set_os_arch "linux" "amd64" "linux" "arm64" "macos" "amd64" "macos" "arm64"
+    set_os_arch "linux" "amd64" "linux" "arm64" "macos" "arm64"
     url="https://github.com/jqlang/jq/releases/download/jq-1.8.0/jq-$os-$arch"
     jq_tmpdir=$(mktemp -d)
     trap 'rm -rf "$jq_tmpdir"' EXIT INT TERM
@@ -36,9 +37,10 @@ fetch() {
 
 # install the most recent version
 install() {
+  require_cmd curl || return 1
   local version url
   version="$1"
-  set_os_arch "linux" "amd64" "linux" "arm64" "macos" "amd64" "macos" "arm64"
+  set_os_arch "linux" "amd64" "linux" "arm64" "macos" "arm64"
   url="https://github.com/jqlang/jq/releases/download/$version/jq-$os-$arch"
   tmpfile=$(mktemp)
   trap 'rm -f "$tmpfile"' EXIT INT TERM

@@ -25,12 +25,9 @@ fetch() {
 # install the most recent version
 # GNU only ships sources, so build them with the system compiler or zig
 install() {
+  require_cmd curl tar make || return 1
   local version url tmpdir cc
   version="$1"
-  if ! 2>/dev/null >/dev/null make --version; then
-    echo "make is required to build $name" >&2
-    return 1
-  fi
   if 2>/dev/null >/dev/null cc --version; then
     cc="cc"
   elif 2>/dev/null >/dev/null zig version; then

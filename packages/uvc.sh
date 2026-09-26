@@ -15,6 +15,7 @@ check() {
 
 # fetch the latest version
 fetch() {
+  require_cmd curl sha256sum || return 1
   local url
   url="https://github.com/audivir/uvc/raw/refs/heads/main/uvc"
   curl --fail-with-body -sL "$url" | sha256sum | awk '{print $1}'
@@ -22,6 +23,7 @@ fetch() {
 
 # install the most recent version
 install() {
+  require_cmd curl || return 1
   local url
   url="https://github.com/audivir/uvc/raw/refs/heads/main/uvc"
   tmpfile=$(mktemp)

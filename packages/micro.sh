@@ -22,9 +22,10 @@ fetch() {
 
 # install the most recent version
 install() {
+  require_cmd curl tar || return 1
   local version url
   version="$1"
-  set_os_arch "linux" "64" "linux" "-arm64" "osx" "" "macos" "-arm64"
+  set_os_arch "linux" "64" "linux" "-arm64" "macos" "-arm64"
   url="https://github.com/micro-editor/micro/releases/download/v$version/micro-$version-$os$arch.tar.gz"
   tmpfile="$(mktemp)"
   trap 'rm -f "$tmpfile"' EXIT INT TERM

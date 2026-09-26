@@ -298,6 +298,13 @@ update_zshsetup() {
   echo "LAST_EPOCH=$((EPOCHSECONDS / 60 / 60 / 24))" >|"${ZSH_CACHE_DIR:-$omz_dir/cache}/.zsh-update"
 }
 
+# installs manually packaged tools
+install_manual() {
+  for p in "$@"; do
+    "$ZSHSETUP_HOME/packages/$p.sh" install || __eprint "Failed to install $p"
+  done
+}
+
 # uninstalls a single package
 uninstall_manual() {
   for p in "$@"; do

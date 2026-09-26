@@ -20,9 +20,10 @@ fetch() {
 
 # install the most recent version
 install() {
+  require_cmd curl tar || return 1
   local version url
   version="$1"
-  set_os_arch "unknown-linux-gnu" "x86_64" "unknown-linux-gnu" "aarch64" "apple-darwin" "x86_64" "apple-darwin" "aarch64"
+  set_os_arch "unknown-linux-gnu" "x86_64" "unknown-linux-gnu" "aarch64" "apple-darwin" "aarch64"
   url="https://github.com/astral-sh/uv/releases/download/$version/uv-$arch-$os.tar.gz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM

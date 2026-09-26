@@ -18,6 +18,7 @@ check() {
 # fetch the latest version
 # jq may not be installed yet, and the index lists the newest release first
 fetch() {
+  require_cmd curl || return 1
   curl --fail-with-body -sL "$index_url" \
     | grep -o 'https://ziglang.org/download/[0-9.]*/' \
     | head -n 1 \
@@ -26,9 +27,10 @@ fetch() {
 
 # install the most recent version
 install() {
+  require_cmd curl tar || return 1
   local version url tmpdir
   version="$1"
-  set_os_arch "linux" "x86_64" "linux" "aarch64" "macos" "x86_64" "macos" "aarch64"
+  set_os_arch "linux" "x86_64" "linux" "aarch64" "macos" "aarch64"
   url="https://ziglang.org/download/$version/zig-$arch-$os-$version.tar.xz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM

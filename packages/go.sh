@@ -15,6 +15,7 @@ check() {
 
 # fetch the latest version
 fetch() {
+  require_cmd curl || return 1
   local url
   url="https://go.dev/VERSION?m=text"
   curl --fail-with-body -sL "$url" | head -n 1
@@ -22,9 +23,10 @@ fetch() {
 
 # install the most recent version
 install() {
+  require_cmd curl tar || return 1
   local version url
   version="$1"
-  set_os_arch "linux" "amd64" "linux" "arm64" "darwin" "amd64" "darwin" "arm64"
+  set_os_arch "linux" "amd64" "linux" "arm64" "darwin" "arm64"
   url="https://go.dev/dl/$version.$os-$arch.tar.gz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
