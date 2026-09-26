@@ -1,107 +1,87 @@
-#!/usr/bin/env sh
-_LINUX_WARNING=0
-# macOS: check dark mode
-_is_dark_darwin() {
-  defaults read -g AppleInterfaceStyle >/dev/null 2>&1
-}
+#!/usr/bin/env bash
 
-# Linux: not yet implemented, falls back to time of day
-_is_dark_linux() {
-  if [ "$_LINUX_WARNING" -eq 0 ]; then
-    echo "Dark mode checking for Linux is not yet implemented. Defaulting to time of day." >&2
-    _LINUX_WARNING=1
-  fi
-  _is_time_for_dark
-}
-
-# Detect dark mode
-_is_dark() {
-  if [ "$(uname)" = "Darwin" ]; then
-    _is_dark_darwin
-  else
-    _is_dark_linux
-  fi
-}
-
-# Set LC_THEME to dark if input is true
-_set_theme() {
-  if [ "$1" -eq 0 ]; then
-    LC_THEME="dark"
-  else
-    LC_THEME="light"
+__theme_viewer_update() {
+  # locally: detect dark mode
+  # over SSH: keep the forwarded LC_THEME, falling back to time of day if unset
+  if [ -z "$SSH_CONNECTION" ]; then
+    # macOS: check dark mode
+    if [[ "$OSTYPE" == darwin* ]]; then
+      defaults read -g AppleInterfaceStyle >/dev/null 2>&1
+    else
+      # Linux: not yet implemented, falls back to time of day
+      # detect local night time (19-7 => dark)
+      local hour
+      hour=$(date +%H)
+      hour=${hour#0}
+      [ "${hour:-0}" -lt 7 ] || [ "${hour:-0}" -ge 19 ]
+    fi
+    # shellcheck disable=SC2181
+    [ $? -eq 0 ] && LC_THEME="dark" || LC_THEME="light"
+  elif [ -z "$LC_THEME" ]; then
+    local hour
+    hour=$(date +%H)
+    hour=${hour#0}
+    if [ "${hour:-0}" -lt 7 ] || [ "${hour:-0}" -ge 19 ]; then
+      LC_THEME="dark"
+    else
+      LC_THEME="light"
+    fi
   fi
   export LC_THEME
 }
 
-# Detect local night time (19-7 => dark)
-_is_time_for_dark() {
-  _hour=$(date +%H)
-  _hour=${_hour#0}
-  _hour=${_hour:-0}
-  [ "$_hour" -lt 7 ] || [ "$_hour" -ge 19 ]
-}
-
-# Update theme:
-# locally: detect dark mode
-# over SSH: keep the forwarded LC_THEME, falling back to time of day if unset
-_update_theme() {
-  if [ -z "$SSH_CONNECTION" ]; then
-    _is_dark
-    _set_theme "$?"
-  elif [ -z "$LC_THEME" ]; then
-    _is_time_for_dark
-    _set_theme "$?"
-  fi
-}
-
-# Check if current theme is light
-_use_light_theme() {
-  _update_theme
-  [ "$LC_THEME" = "light" ]
-}
-
-# Format: app|light_theme|dark_theme|command_with_placeholder
-# use [] as placeholder
-THEMEABLE_APPS="
+__theme_viewer_init() {
+  # format: app|light_theme|dark_theme|command_with_placeholder
+  # use [] as placeholder
+  THEMEABLE_APPS="${THEMEABLE_APPS:-
 micro|sunny-day|one-dark|micro --colorscheme
 bat|Monokai Extended Light|Monokai Extended|bat --theme
 kv|light|dark|kv --theme
-"
+}"
 
-while IFS='|' read -r _app _light _dark _template; do
-  [ -z "$_app" ] && continue
+  local app light dark template
+  while IFS='|' read -r app light dark template; do
+    [ -z "$app" ] && continue
 
-  # skip if app is not installed
-  if ! command -v "$_app" >/dev/null; then
-    echo "$_app not found, cannot create themed functions" >&2
-    continue
+    # skip if app is not installed
+    if ! command -v "$app" >/dev/null; then
+      echo "$app not found, cannot create themed functions" >&2
+      continue
+    fi
+
+    eval "\
+$app() {
+  local theme
+  __theme_viewer_update
+  if [[ \"\$LC_THEME\" == 'light' ]]; then
+    theme=\"$light\"
+  else
+    theme=\"$dark\"
   fi
-
-  eval "\
-    $_app() {
-      if _use_light_theme; then
-        _theme=\"$_light\"
-      else
-        _theme=\"$_dark\"
-      fi
-      command $_template \"\$_theme\" \"\$@\"
-    }
-    s$_app() {
-      if _use_light_theme; then
-        _theme=\"$_light\"
-      else
-        _theme=\"$_dark\"
-      fi
-      sudo $_template \"\$_theme\" \"\$@\"
-    }
-"
-done <<EOF
+  command $template \"\$theme\" \"\$@\"
+}
+s$app() {
+  local theme
+  __theme_viewer_update
+  if [[ \"\$LC_THEME\" == 'light' ]]; then
+    theme=\"$light\"
+  else
+    theme=\"$dark\"
+  fi
+  sudo $template \"\$theme\" \"\$@\"
+}
+  "
+  done <<EOF
 $THEMEABLE_APPS
 EOF
 
-_update_theme
+  __theme_viewer_update
 
-ssh() {
-  _update_theme
-  command ssh -o SendEnv=LC_THEME "$@"
+  ssh() {
+    __theme_viewer_update
+    command ssh -o SendEnv=LC_THEME "$@"
+  }
 }
+
+__theme_viewer_init
+unset -f __theme_viewer_init
