@@ -6,26 +6,28 @@ set -euo pipefail
 . "$ZSHSETUP_HOME/packages/helper.sh"
 
 name="..."
+brew="..."
+apt="..."
 local_bin="..."
 
-# check the currently installed version, echo "" if not installed
+# checks the currently installed version, echoes "" if not installed
 check() {
   2>/dev/null "$local_bin" --version | awk '{print $2}' || echo ""
 }
 
-# fetch the latest version
+# fetches the latest version
 fetch() {
   : # ...
 }
 
-# install the most recent version
+# installs the most recent version
 install() {
   : # ...
 }
 
-# uninstall the installed package
+# uninstalls the installed package
 uninstall() {
   rm "$local_bin"
 }
 
-main "$name" "$@"
+main "$name" "$brew" "$apt" "$@"

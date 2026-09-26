@@ -2,28 +2,61 @@
 # shellcheck shell=bash
 set -euo pipefail
 
+packages=(zig make gawk jq micromamba go rustup uv uvc bun bat micro kv)
+
+package_manager() {
+  python3 "$ZSHSETUP_HOME/package_manager.py" "$@"
+}
+
 require_cmd() {
   local cmd
   for cmd in "$@"; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
+      if (( ${packages[(Ie)$cmd]} )); then
+          "$ZSHSETUP_HOME/packages/$cmd.sh" package
+      fi
       echo "Required command not found: $cmd (needed by ${name:-package})" >&2
       return 1
     fi
   done
 }
 
+# downloads a file with curl (and falls back to wget if curl is not available)
+curl_or_wget() {
+  local url dest
+  url="$1"
+  dest="${2:-}"
+
+  if command -v curl >/dev/null 2>&1; then
+    if [ -n "$dest" ]; then
+      curl --fail-with-body -SL "$url" -o "$dest"
+    else
+      curl --fail-with-body -SL "$url"
+    fi
+  elif command -v wget >/dev/null 2>&1; then
+    if [ -n "$dest" ]; then
+      wget -O "$dest" "$url"
+    else
+      wget -O - "$url"
+    fi
+  else
+    echo "curl or wget is required (needed by ${name:-package})" >&2
+    return 1
+  fi
+}
+
 get_latest_github() {
-  require_cmd curl jq || return 1
+  require_cmd jq || return 1
   local repo
   repo="$1"
-  curl --fail-with-body -sL "https://api.github.com/repos/$repo/releases/latest" | jq -r .tag_name
+  curl_or_wget "https://api.github.com/repos/$repo/releases/latest" | jq -r .tag_name
 }
 
 get_latest_crate() {
-  require_cmd curl jq || return 1
+  require_cmd jq || return 1
   local crate
   crate="$1"
-  curl --fail-with-body -sL "https://crates.io/api/v1/crates/$crate" | jq -r .crate.max_stable_version
+  curl_or_wget "https://crates.io/api/v1/crates/$crate" | jq -r .crate.max_stable_version
 }
 
 set_os_arch() {
@@ -69,7 +102,7 @@ set_os_arch() {
 # rm -rf "$tmpdir"
 # trap - EXIT INT TERM
 
-# upgrade the version if it is currently installed
+# upgrades the version if it is currently installed
 upgrade() {
   local name installed latest
   name="$1"
@@ -89,11 +122,16 @@ upgrade() {
 }
 
 main() {
-  local name cmd version
+  local name brew apt cmd version
   name="$1"
-  cmd="$2"
+  brew="$2"
+  apt="$3"
+  cmd="$4"
 
   case "$cmd" in
+    package)
+      package_manager "$name" "$brew" "$apt"
+      ;;
     install)
       version=$(fetch) || return 1
       echo "Installing $name ($version)" >&2
@@ -104,6 +142,9 @@ main() {
       ;;
     uninstall)
       uninstall
+      ;;
+    fetch)
+      fetch
       ;;
     *)
       echo "Unknown subcommand $cmd" >&2

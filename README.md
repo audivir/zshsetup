@@ -9,14 +9,13 @@ tools are installed on shell start, either with Homebrew, APT, or a manual insta
 ## Prerequisites
 
 - macOS on arm64, or Linux on x86_64 or arm64
-- `curl`, `git`, `python3`, and `tar`
-- `unzip` (only required when installing `bun`)
+- `curl` (or `wget`), `git`, and `tar`
 - `zsh` (installed to `~/.local` with [zsh-bin](https://github.com/romkatv/zsh-bin) if missing)
 
 ## Installation
 
 ```bash
-curl --fail-with-body -L https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh | sh
+(command -v curl >/dev/null 2>&1 && curl --fail-with-body -sSL https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh || wget -q -O - https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh) | sh
 ```
 
 This clones the repo to `~/.config/zshsetup` and links `~/.zshrc` to its `.zshrc`.
@@ -52,7 +51,7 @@ python3 <(curl --fail-with-body -L https://gist.githubusercontent.com/muendeleza
 The following packages have bootstrap scripts in `packages/`:
 
 - `bat`: `cat` clone with syntax highlighting and Git integration (requires `curl`, `jq`, `tar`)
-- `bun`: Fast all-in-one JavaScript/TypeScript runtime and toolkit (requires `curl`, `jq`, `unzip`)
+- `bun`: Fast all-in-one JavaScript/TypeScript runtime and toolkit (requires `curl`, `jq`, `python3`)
 - `gawk`: GNU Awk text processing utility (requires `curl`, `make`, `tar`, and `cc` or `zig`)
 - `go`: The Go programming language toolchain (requires `curl`, `tar`)
 - `jq`: Command-line JSON processor (requires `curl`)
@@ -61,6 +60,7 @@ The following packages have bootstrap scripts in `packages/`:
 - `micro`: Modern terminal-based text editor (requires `curl`, `jq`, `tar`)
 - `micromamba`: Fast standalone conda package manager (requires `curl`, `jq`)
 - `oh-my-zsh`: Community-driven zsh configuration framework (requires `curl`, `git`, `zsh`)
+- `python3`: Python programming language interpreter (requires `uv`)
 - `rustup`: Rust toolchain installer (requires `curl`, `jq`)
 - `uv`: Fast Python package and project manager (requires `curl`, `jq`, `tar`)
 - `uvc`: Python command wrapper and cache tool (requires `curl`, `sha256sum`)

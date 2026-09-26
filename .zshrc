@@ -36,7 +36,9 @@ __assure_dir() {
 }
 
 __package_manager() {
-  python3 "$ZSHSETUP_HOME/package_manager.py" "$@"
+  local package
+  package="$1"
+  "$ZSHSETUP_HOME/packages/$package.sh" package
 }
 
 __source() {
@@ -146,7 +148,7 @@ __init_zshsetup() {
 
   # BEGIN ZIG
   if [ -n "$ZSHSETUP_REQUIRE_ZIG" ] && ! __available zig; then
-    __package_manager zig zig "" || return 1
+    __package_manager zig || return 1
   fi
   # END ZIG
 
@@ -155,24 +157,24 @@ __init_zshsetup() {
     # zig and make are only needed to build gawk from source
     # cc and make are run, since macOS ships shims for them without the Command Line Tools
     if ! 2>/dev/null >/dev/null cc --version && ! __available zig; then
-      __package_manager zig zig "" || return 1
+      __package_manager zig || return 1
     fi
     if ! 2>/dev/null >/dev/null make --version; then
-      __package_manager make "" make || return 1
+      __package_manager make || return 1
     fi
-    __package_manager gawk gawk gawk || return 1
+    __package_manager gawk || return 1
   fi
   # END GAWK
 
   # BEGIN JQ
   if ! __available jq; then
-    __package_manager jq jq jq || return 1
+    __package_manager jq || return 1
   fi
   # END JQ
 
   # BEGIN MICROMAMBA
   if ! __available micromamba; then
-    __package_manager micromamba micromamba-static micromamba || return 1
+    __package_manager micromamba || return 1
   fi
   alias conda='micromamba'
   __source command micromamba shell hook --shell zsh || return 1
@@ -182,7 +184,7 @@ __init_zshsetup() {
   # BEGIN GO
   PATH="$XDG_DATA_HOME/go/bin:$XDG_DATA_HOME/golang/bin:$PATH"
   if ! __available go; then
-    __package_manager go go golang || return 1
+    __package_manager go || return 1
   fi
   if [ -d "$XDG_DATA_HOME/golang" ]; then
     export GOROOT="$XDG_DATA_HOME/golang"
@@ -195,16 +197,16 @@ __init_zshsetup() {
   export RUSTUP_HOME="$XDG_DATA_HOME/rustup"
   export CARGO_HOME="$XDG_DATA_HOME/cargo"
   if ! __available rustup; then
-    __package_manager rustup rustup rustup || return 1
+    __package_manager rustup || return 1
   fi
   # END RUST
 
   # BEGIN PYTHON
   if ! __available uv; then
-    __package_manager uv uv "" || return 1
+    __package_manager uv || return 1
   fi
   if ! __available uvc; then
-    __package_manager uvc uvc "" || return 1
+    __package_manager uvc || return 1
   fi
   __source command uvc shell zsh || return 1
   # END PYTHON
@@ -216,21 +218,21 @@ __init_zshsetup() {
   export BUN_CONFIG_DIR="$XDG_CONFIG_HOME/bun"
   PATH="$BUN_INSTALL/bin:$PATH"
   if ! __available bun; then
-    __package_manager bun bun "" || return 1
+    __package_manager bun || return 1
   fi
   # END JAVASCRIPT
 
   # BEGIN EXTRA TOOLS
   if ! __available bat; then
-    __package_manager bat bat bat || return 1
+    __package_manager bat || return 1
   fi
 
   if ! __available micro; then
-    __package_manager micro micro micro || return 1
+    __package_manager micro || return 1
   fi
 
   if ! __available kv; then
-    __package_manager kv kv kv || return 1
+    __package_manager kv || return 1
   fi
   # END EXTRA TOOLS
 

@@ -6,14 +6,16 @@ set -euo pipefail
 . "$ZSHSETUP_HOME/packages/helper.sh"
 
 name="go"
+brew="go"
+apt="golang"
 local_bin="$XDG_DATA_HOME/golang/bin/go"
 
-# check the currently installed version, echo "" if not installed
+# checks the currently installed version, echoes "" if not installed
 check() {
   2>/dev/null "$local_bin" version | awk '{print $3}' || echo ""
 }
 
-# fetch the latest version
+# fetches the latest version
 fetch() {
   require_cmd curl || return 1
   local url
@@ -21,24 +23,23 @@ fetch() {
   curl --fail-with-body -sL "$url" | head -n 1
 }
 
-# install the most recent version
+# installs the most recent version
 install() {
-  require_cmd curl tar || return 1
   local version url
   version="$1"
   set_os_arch "linux" "amd64" "linux" "arm64" "darwin" "arm64"
   url="https://go.dev/dl/$version.$os-$arch.tar.gz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
-  curl --fail-with-body -L "$url" | tar -xzC "$tmpdir"
+  curl_or_wget "$url" | tar -xzC "$tmpdir"
   mv "$tmpdir/go" "$XDG_DATA_HOME/golang"
   rm -rf "$tmpdir"
   trap - EXIT INT TERM
 }
 
-# uninstall the installed package
+# uninstalls the installed package
 uninstall() {
   rm -r "$XDG_DATA_HOME/golang"
 }
 
-main "$name" "$@"
+main "$name" "$brew" "$apt" "$@"

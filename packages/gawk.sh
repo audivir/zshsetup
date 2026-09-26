@@ -6,14 +6,16 @@ set -euo pipefail
 . "$ZSHSETUP_HOME/packages/helper.sh"
 
 name="gawk"
+brew="gawk"
+apt="gawk"
 local_bin="$XDG_BIN_HOME/gawk"
 
-# check the currently installed version, echo "" if not installed
+# checks the currently installed version, echoes "" if not installed
 check() {
   2>/dev/null "$local_bin" --version | awk 'NR == 1 { sub(",", "", $3); print $3 }' || echo ""
 }
 
-# fetch the latest version
+# fetches the latest version
 fetch() {
   curl --fail-with-body -sL "https://ftp.gnu.org/gnu/gawk/" \
     | grep -o 'gawk-[0-9.]*\.tar\.xz"' \
@@ -22,12 +24,13 @@ fetch() {
     | tail -n 1
 }
 
-# install the most recent version
+# installs the most recent version
 # GNU only ships sources, so build them with the system compiler or zig
 install() {
-  require_cmd curl tar make || return 1
+  require_cmd make cc || return 1
   local version url tmpdir cc
   version="$1"
+  # TODO: move this to a own cc package!
   if 2>/dev/null >/dev/null cc --version; then
     cc="cc"
   elif 2>/dev/null >/dev/null zig version; then
@@ -39,7 +42,7 @@ install() {
   url="https://ftp.gnu.org/gnu/gawk/gawk-$version.tar.xz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
-  curl --fail-with-body -L "$url" | tar -x -J -C "$tmpdir"
+  curl_or_wget "$url" | tar -xJC "$tmpdir"
   (
     cd "$tmpdir/gawk-$version"
     # zig cannot link the loadable extensions as macOS bundles
@@ -52,9 +55,9 @@ install() {
   trap - EXIT INT TERM
 }
 
-# uninstall the installed package
+# uninstalls the installed package
 uninstall() {
   rm "$local_bin"
 }
 
-main "$name" "$@"
+main "$name" "$brew" "$apt" "$@"

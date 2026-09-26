@@ -6,14 +6,16 @@ set -euo pipefail
 . "$ZSHSETUP_HOME/packages/helper.sh"
 
 name="rustup"
+brew="rustup"
+apt="rustup"
 local_bin="$CARGO_HOME/bin/rustup"
 
-# check the currently installed version, echo "" if not installed
+# checks the currently installed version, echoes "" if not installed
 check() {
   2>/dev/null "$local_bin" --version | awk '{print $2}' || echo ""
 }
 
-# fetch the latest version
+# fetches the latest version
 fetch() {
   require_cmd curl jq || return 1
   local url
@@ -21,7 +23,7 @@ fetch() {
   curl --fail-with-body -sL "$url" | jq -r '.[0].name'
 }
 
-# install the most recent version
+# installs the most recent version
 install() {
   require_cmd curl sh || return 1
   curl --fail-with-body -L "https://sh.rustup.rs" | sh -s -- \
@@ -30,7 +32,7 @@ install() {
     --no-modify-path -y
 }
 
-# upgrade rustup in place, since uninstall would also remove all toolchains
+# upgrades rustup in place, since uninstall would also remove all toolchains
 upgrade() {
   if [ -z "$(check)" ]; then
     echo "$name is not installed manually, update via package manager" >&2
@@ -39,9 +41,9 @@ upgrade() {
   "$local_bin" self update
 }
 
-# uninstall the installed package, including all toolchains and cargo binaries
+# uninstalls the installed package, including all toolchains and cargo binaries
 uninstall() {
   "$local_bin" self uninstall -y
 }
 
-main "$name" "$@"
+main "$name" "$brew" "$apt" "$@"

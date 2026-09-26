@@ -6,37 +6,38 @@ set -euo pipefail
 . "$ZSHSETUP_HOME/packages/helper.sh"
 
 name="bat"
+brew="bat"
+apt="bat"
 local_bin="$XDG_BIN_HOME/bat"
 
-# check the currently installed version, echo "" if not installed
+# checks the currently installed version, echoes "" if not installed
 check() {
   2>/dev/null "$local_bin" --version | awk '{print "v"$2}' || echo ""
 }
 
-# fetch the latest version
+# fetches the latest version
 fetch() {
   get_latest_github "sharkdp/bat"
 }
 
-# install the most recent version
+# installs the most recent version
 install() {
-  require_cmd curl tar || return 1
   local version url
   version="$1"
   set_os_arch "unknown-linux-gnu" "x86_64" "unknown-linux-gnu" "aarch64" "apple-darwin" "aarch64"
   url="https://github.com/sharkdp/bat/releases/download/$version/bat-$version-$arch-$os.tar.gz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
-  curl --fail-with-body -L "$url" | tar -x -z -C "$tmpdir"
+  curl_or_wget "$url" | tar -xzC "$tmpdir"
   chmod +x "$tmpdir/bat-$version-$arch-$os/bat"
   mv "$tmpdir/bat-$version-$arch-$os/bat" "$XDG_BIN_HOME/bat"
   rm -rf "$tmpdir"
   trap - EXIT INT TERM
 }
 
-# uninstall the installed package
+# uninstalls the installed package
 uninstall() {
   rm "$local_bin"
 }
 
-main "$name" "$@"
+main "$name" "$brew" "$apt" "$@"
