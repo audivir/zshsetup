@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """CLI for installing a utility with a user-selected package manager."""
 
 # ruff: noqa: S603,S607

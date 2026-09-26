@@ -1,71 +1,11 @@
 #!/usr/bin/env zsh
 # shellcheck shell=bash
 # shellcheck disable=SC1091
-# expect $USER and $HOME to be set
+# expects $USER and $HOME to be set
 
-export ZSHSETUP_REPO="https://github.com/audivir/zshsetup"
-export ZSHSETUP_HOME="$HOME/.config/zshsetup"
-
-# drop duplicate PATH and FPATH entries, e.g. when .zshrc is sourced again
+# drops duplicate PATH and FPATH entries, when .zshrc is sourced again
 # shellcheck disable=SC2034
 typeset -U path fpath
-
-rm() {
-  local arg root mounts target hits after_options
-
-  after_options=false
-  mounts=""
-
-  for arg in "$@"; do
-    if ! $after_options; then
-      case "$arg" in
-        --)
-          after_options=true
-          continue
-          ;;
-        -*)
-          continue
-          ;;
-      esac
-    fi
-
-    [[ -e "$arg" || -L "$arg" ]] || continue
-
-    # rm deletes a symlink itself, so only its parent directory is resolved
-    if [[ -L "$arg" && "$arg" != */ ]]; then
-      root="${arg:h:A}"
-      root="${root%/}/${arg:t}"
-    else
-      root="${arg:A}"
-    fi
-
-    # Fetch all mount targets once depending on the OS
-    if [[ -z "$mounts" ]]; then
-      mounts=$(
-        if command -v findmnt >/dev/null 2>&1; then
-          findmnt -rn -o TARGET
-        else
-          mount | awk 'match($0, / on \/.* \(/) { print substr($0, RSTART+4, RLENGTH-6) }'
-        fi
-      )
-    fi
-
-    hits=""
-    while IFS= read -r target; do
-      if [[ "$target" == "$root" || ("$root" != "/" && "$target" == "$root"/*) ]]; then
-        hits+="$target"$'\n'
-      fi
-    done <<<"$mounts"
-
-    if [[ -n "$hits" ]]; then
-      printf 'rm: refusing to remove %q\n' "$arg" >&2
-      printf 'rm: mounted filesystem(s):\n%s' "$hits" >&2
-      return 1
-    fi
-  done
-
-  /bin/rm "$@"
-}
 
 __eprint() {
   echo "$1" >&2
@@ -114,7 +54,7 @@ __init_cache() {
   local user_cache scratch_cache
   user_cache="$HOME/.cache"
   scratch_cache="/scratch/$USER/.cache"
-  # if /home is mounted, look for /scratch to use as cache directory
+  # if /home is mounted, looks for /scratch to use as cache directory
   if [ -z "$ZSHSETUP_IGNORESCRATCH" ] && [ -d "/scratch" ] \
     && [ ! -f "$user_cache/.zshsetup_do_not_use_scratch" ]; then
     if [ -d "$user_cache" ] && [ ! -L "$user_cache" ]; then
@@ -127,23 +67,23 @@ or keep it with:
     fi
     __assure_dir "$scratch_cache" || return 1
     __assure_link "$user_cache" "$scratch_cache" || return 1
-    CACHE_DIR="$scratch_cache"
-  else
-    CACHE_DIR="$user_cache"
   fi
 }
 
-__init_zshsetup() {
-  __init_cache || return 1
+# inits the environment before running any failable commands
+__init_zshsetup_env() {
+  export ZSHSETUP_REPO="https://github.com/audivir/zshsetup"
+  export ZSHSETUP_HOME="$HOME/.config/zshsetup"
 
+  # SETUP XDG SPEC
   export LOCAL_HOME="$HOME/.local"
   export XDG_CONFIG_HOME="$HOME/.config"
   export XDG_DATA_HOME="$LOCAL_HOME/share"
   export XDG_BIN_HOME="$LOCAL_HOME/bin"
-  export XDG_CACHE_HOME="$CACHE_DIR"
+  export XDG_CACHE_HOME="$HOME/.cache"
   export XDG_STATE_HOME="$LOCAL_HOME/state"
-  # systemd sets it on Linux, and macOS has no equivalent besides the per-user TMPDIR
-  # an inherited value is replaced when its directory does not exist
+
+  # systemd / macOS runtime dir
   if [ ! -d "$XDG_RUNTIME_DIR" ]; then
     if [ -d "/run/user/$UID" ]; then
       export XDG_RUNTIME_DIR="/run/user/$UID"
@@ -152,30 +92,50 @@ __init_zshsetup() {
     fi
   fi
 
+  # SETUP HISTORY
+  HISTFILE="$ZSHSETUP_HOME/zsh_history"
+  HISTSIZE=50000
+  # shellcheck disable=SC2034
+  SAVEHIST=1000
+
+  # SETUP OH-MY-ZSH
+  export ZSH="$ZSHSETUP_HOME/oh-my-zsh"
+  # shellcheck disable=SC2034
+  plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
+  ZSH_CACHE_DIR="$XDG_CACHE_HOME/zsh"
+  # shellcheck disable=SC2034
+  ZSH_COMPDUMP="$ZSH_CACHE_DIR/zcompdump-${HOST%%.*}-${ZSH_VERSION}"
+  # shellcheck disable=SC2034
+  ZSH_CUSTOM="$ZSH/custom"
+  # shellcheck disable=SC2034
+  ZSH_THEME="robbyrussell"
+
+  # SETUP PATH
+  PATH="$XDG_BIN_HOME:$HOME/bin:$PATH"
+
+  # SETUP OTHER ENVIRONMENT
+  export GNUPGHOME="$XDG_DATA_HOME/gnupg"
+  export MPLCONFIGDIR="$XDG_CONFIG_HOME/matplotlib"
+  export PYTHON_HISTORY="$XDG_DATA_HOME/python/python_history"
+}
+
+# runs the setup functions
+__init_zshsetup() {
+  __init_cache || return 1
+
+  local dir
   for dir in "$LOCAL_HOME" "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_BIN_HOME" "$XDG_CACHE_HOME" "$XDG_STATE_HOME"; do
     __assure_dir "$dir" || return 1
   done
 
   # BEGIN OH-MY-ZSH
-  export ZSH="$ZSHSETUP_HOME/oh-my-zsh"
   if [ ! -d "$ZSH" ]; then
     "$ZSHSETUP_HOME/packages/oh-my-zsh.sh" || return 1
   fi
-  # oh-my-zsh bundles zsh-autosuggestions and zsh-syntax-highlighting itself
+  __assure_dir "$ZSH_CACHE_DIR" || return 1
   # shellcheck disable=SC2034
-  plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
-  ZSH_CACHE="$XDG_CACHE_HOME/zsh"
-  __assure_dir "$ZSH_CACHE" || return 1
-  # shellcheck disable=SC2034
-  ZSH_COMPDUMP="$ZSH_CACHE/zcompdump-${HOST%%.*}-${ZSH_VERSION}"
-  # shellcheck disable=SC2034
-  ZSH_CUSTOM="$ZSH/custom"
-  # shellcheck disable=SC2034
-  ZSH_THEME="robbyrussell"
   . "$ZSH/oh-my-zsh.sh" || return 1
   # END OH-MY-ZSH
-
-  HISTFILE="$ZSHSETUP_HOME/zsh_history"
 
   # BEGIN HOMEBREW
   if [ -f "/opt/homebrew/bin/brew" ]; then
@@ -183,8 +143,6 @@ __init_zshsetup() {
     alias homebrewupdate='brew update; brew upgrade --formulae --yes && brew cu --yes && cd /opt/homebrew && git stash pop &>/dev/null || true && cd -'
   fi
   # END HOMEBREW
-
-  PATH="$XDG_BIN_HOME:$HOME/bin:$PATH"
 
   # BEGIN GAWK
   if ! __available gawk; then
@@ -198,14 +156,6 @@ __init_zshsetup() {
     fi
     __package_manager gawk gawk gawk || return 1
   fi
-  showhist() {
-    # zsh stores non-ASCII history as metafied bytes, which are no valid UTF-8
-    LC_ALL=C gawk 'match($0, /^: ([0-9]+):([0-9]+);/, m) {
-      print strftime("%Y-%m-%d %H:%M:%S", m[1]) ":" m[2] ";" substr($0, RLENGTH + 1)
-      next
-    }
-    { print }' "$HISTFILE"
-  }
   # END GAWK
 
   # BEGIN JQ
@@ -283,12 +233,6 @@ __init_zshsetup() {
   alias sb="sudo bat --paging=never --style=plain --tabs=4"
   # END ALIASES
 
-  # BEGIN ENVIRONMENT
-  export GNUPGHOME="$XDG_DATA_HOME/gnupg"
-  export MPLCONFIGDIR="$XDG_CONFIG_HOME/matplotlib"
-  export PYTHON_HISTORY="$XDG_DATA_HOME/python/python_history"
-  # END ENVIRONMENT
-
   # typeset -U only deduplicates array assignments, not PATH="...:$PATH"
   path=("${path[@]}")
   export PATH
@@ -296,8 +240,13 @@ __init_zshsetup() {
   # BEGIN THEME VIEWER
   . "$ZSHSETUP_HOME/theme_viewer.sh" || return 1
   # END THEME VIEWER
+
+  # BEGIN CUSTOM FUNCTIONS
+  . "$ZSHSETUP_HOME/custom_functions.sh" || return 1
+  # END CUSTOM FUNCTIONS
 }
 
+# installs zshsetup from github
 __install_zshsetup() {
   if [ -d "$ZSHSETUP_HOME" ]; then
     __assure_link "$HOME/.zshrc" "$ZSHSETUP_HOME/.zshrc" || return 1
@@ -316,7 +265,8 @@ __install_zshsetup() {
   return 0
 }
 
-__update_zshsetup() {
+# updates zshsetup itself and all packages
+update_zshsetup() {
   if [ ! -d "$ZSHSETUP_HOME" ]; then
     __eprint "$ZSHSETUP_HOME does not exist, installing instead"
     __install_zshsetup
@@ -324,10 +274,10 @@ __update_zshsetup() {
   fi
   pushd "$ZSHSETUP_HOME" || return 1
   git fetch || __eprint "Failed to fetch new data from $ZSHSETUP_REPO"
-  # only stashes and reapplies when there are local changes
-  git merge --autostash || __eprint "Failed to merge updates"
+  git merge || __eprint "Failed to merge updates"
   popd || true
 
+  local packages
   packages=(zig make gawk jq micromamba go rustup uv uvc bun bat micro kv)
   for p in "${packages[@]}"; do
     "$ZSHSETUP_HOME/packages/$p.sh" upgrade
@@ -342,20 +292,77 @@ __update_zshsetup() {
   echo "LAST_EPOCH=$((EPOCHSECONDS / 60 / 60 / 24))" >|"${ZSH_CACHE_DIR:-$omz_dir/cache}/.zsh-update"
 }
 
-__uninstall_manual() {
+# uninstalls a single package
+uninstall_manual() {
   for p in "$@"; do
     "$ZSHSETUP_HOME/packages/$p.sh" uninstall || __eprint "Failed to uninstall $p"
   done
 }
 
-if [ "$1" = "install" ]; then
-  __install_zshsetup
-  exit "$?"
-elif [ "$1" = "update" ]; then
-  __update_zshsetup
+# edits pre- or post-init files with $EDITOR or micro
+edit_zshsetup() {
+  local target
+  case "${1:-pre}" in
+    pre)
+      target="$ZSHSETUP_HOME/preinit.zsh"
+      ;;
+    post)
+      target="$ZSHSETUP_HOME/postinit.zsh"
+      ;;
+    *)
+      __eprint "Usage: edit_zshsetup <pre|post>"
+      return 1
+      ;;
+  esac
+  if [ ! -f "$target" ]; then
+    printf '#!/usr/bin/env zsh\n# shellcheck shell=bash\n' >"$target" || return 1
+    chmod +x "$target" || return 1
+  fi
+  ${=EDITOR:-micro} "$target"
+}
+
+# runs cli commands or displays usage
+run_zshsetup() {
+  case "$1" in
+    install)
+      __install_zshsetup
+      ;;
+    update)
+      update_zshsetup
+      ;;
+    *)
+      __eprint "Usage: run_zshsetup <install|update>"
+      return 1
+      ;;
+  esac
+}
+
+# INITIALIZE ENVIRONMENT
+__init_zshsetup_env
+
+# CLI
+if [ "$#" -gt 0 ]; then
+  run_zshsetup "$@"
   exit "$?"
 fi
 
-__init_zshsetup
+# SOURCE PRE-INIT
+if [ ! -f "$ZSHSETUP_HOME/preinit.zsh" ]; then
+  printf '#!/usr/bin/env zsh\n# shellcheck shell=bash\n' >"$ZSHSETUP_HOME/preinit.zsh" || return 1
+  chmod +x "$ZSHSETUP_HOME/preinit.zsh" || return 1
+fi
+. "$ZSHSETUP_HOME/preinit.zsh" || return 1
 
-# BEGIN CUSTOM
+# INITIALIZE DIRECTORIES/OMZ/PACKAGES
+__init_zshsetup || return 1
+
+# CLEANUP
+unfunction __assure_link __assure_dir __package_manager __source __available
+unfunction __init_cache __init_zshsetup_env __init_zshsetup __install_zshsetup
+
+# SOURCE POST-INIT
+if [ ! -f "$ZSHSETUP_HOME/postinit.zsh" ]; then
+  printf '#!/usr/bin/env zsh\n# shellcheck shell=bash\n' >"$ZSHSETUP_HOME/postinit.zsh" || return 1
+  chmod +x "$ZSHSETUP_HOME/postinit.zsh" || return 1
+fi
+. "$ZSHSETUP_HOME/postinit.zsh" || return 1

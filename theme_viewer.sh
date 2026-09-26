@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-__theme_viewer_update() {
+update_theme() {
   # locally: detect dark mode
   # over SSH: keep the forwarded LC_THEME, falling back to time of day if unset
   if [ -z "$SSH_CONNECTION" ]; then
@@ -30,7 +30,7 @@ __theme_viewer_update() {
   export LC_THEME
 }
 
-__theme_viewer_init() {
+__init_theme_viewer() {
   # format: app|light_theme|dark_theme|command_with_placeholder
   # use [] as placeholder
   THEMEABLE_APPS="${THEMEABLE_APPS:-
@@ -52,7 +52,7 @@ kv|light|dark|kv --theme
     eval "\
 $app() {
   local theme
-  __theme_viewer_update
+  update_theme
   if [[ \"\$LC_THEME\" == 'light' ]]; then
     theme=\"$light\"
   else
@@ -62,7 +62,7 @@ $app() {
 }
 s$app() {
   local theme
-  __theme_viewer_update
+  update_theme
   if [[ \"\$LC_THEME\" == 'light' ]]; then
     theme=\"$light\"
   else
@@ -75,13 +75,13 @@ s$app() {
 $THEMEABLE_APPS
 EOF
 
-  __theme_viewer_update
+  update_theme
 
   ssh() {
-    __theme_viewer_update
+    update_theme
     command ssh -o SendEnv=LC_THEME "$@"
   }
 }
 
-__theme_viewer_init
-unset -f __theme_viewer_init
+__init_theme_viewer
+unset -f __init_theme_viewer
