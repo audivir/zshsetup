@@ -42,13 +42,14 @@ python3 <(curl --fail-with-body -L https://gist.githubusercontent.com/muendeleza
   updates oh-my-zsh.
 - `__uninstall_manual <package>...` removes manually installed packages.
 - `showhist` prints the history with readable timestamps.
-- Local changes belong below `# BEGIN CUSTOM` in `.zshrc`. Updates stash and reapply them.
+- Local changes belong in `preinit.zsh` (before tools and oh-my-zsh) and `postinit.zsh` (after tools and oh-my-zsh).
 
 Environment variables:
 
 - `ZSHSETUP_CHOICE`: default package manager (`brew`, `apt`, or `manual`) instead of the menu.
 - `ZSHSETUP_IGNORESCRATCH`: do not move the cache directory to `/scratch/$USER/.cache`.
   A `~/.cache/.zshsetup_do_not_use_scratch` file does the same.
+- `ZSHSETUP_REQUIRE_ZIG`: install zig even if not required by gawk (when set and non-empty).
 - `ZSHSETUP_RUST_TOOLCHAIN`: default toolchain for a manual `rustup` install (`stable` if unset).
 
 ## License

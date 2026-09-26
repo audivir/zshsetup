@@ -144,6 +144,12 @@ __init_zshsetup() {
   fi
   # END HOMEBREW
 
+  # BEGIN ZIG
+  if [ -n "$ZSHSETUP_REQUIRE_ZIG" ] && ! __available zig; then
+    __package_manager zig zig "" || return 1
+  fi
+  # END ZIG
+
   # BEGIN GAWK
   if ! __available gawk; then
     # zig and make are only needed to build gawk from source

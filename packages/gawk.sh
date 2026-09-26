@@ -46,9 +46,9 @@ install() {
   (
     cd "$tmpdir/gawk-$version"
     # zig cannot link the loadable extensions as macOS bundles
-    CC="$cc" ./configure --disable-nls --disable-pma --disable-extensions \
+    ARFLAGS="cr" CC="$cc" ./configure --disable-nls --disable-pma --disable-extensions \
       --without-readline --without-mpfr >/dev/null
-    make -j4 >/dev/null
+    make -j4 ARFLAGS="cr" >/dev/null
   )
   mv "$tmpdir/gawk-$version/gawk" "$local_bin"
   rm -rf "$tmpdir"
