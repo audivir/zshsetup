@@ -30,14 +30,13 @@ fetch() {
 
 # installs the most recent version
 install() {
-  require_cmd curl || return 1
   local version url
   version="$1"
   set_os_arch "linux" "64" "linux" "aarch64" "osx" "arm64"
   url="https://github.com/mamba-org/micromamba-releases/releases/download/$version/micromamba-$os-$arch"
   tmpfile=$(mktemp)
   trap 'rm -f "$tmpfile"' EXIT INT TERM
-  curl_or_wget "$url" -o "$tmpfile"
+  curl_or_wget "$url" "$tmpfile"
   chmod +x "$tmpfile"
   mv "$tmpfile" "$XDG_BIN_HOME/micromamba"
   trap - EXIT INT TERM

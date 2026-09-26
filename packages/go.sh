@@ -17,10 +17,9 @@ check() {
 
 # fetches the latest version
 fetch() {
-  require_cmd curl || return 1
   local url
   url="https://go.dev/VERSION?m=text"
-  curl --fail-with-body -sL "$url" | head -n 1
+  curl_or_wget "$url" | head -n 1
 }
 
 # installs the most recent version

@@ -22,20 +22,21 @@ check() {
 fetch() {
   curl_or_wget "$index_url" \
     | grep -o 'https://ziglang.org/download/[0-9.]*/' \
-    | head -n 1 \
-    | awk -F/ '{print $5}'
+    | awk -F/ 'NR == 1 {print $5}'
 }
 
 # installs the most recent version
 install() {
-  require_cmd curl tar || return 1
+  require_cmd python3 || return 1
   local version url tmpdir
   version="$1"
   set_os_arch "linux" "x86_64" "linux" "aarch64" "macos" "aarch64"
   url="https://ziglang.org/download/$version/zig-$arch-$os-$version.tar.xz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
-  curl_or_wget "$url" | tar -xJC "$tmpdir"
+  curl_or_wget "$url" "$tmpdir/zig.tar.xz"
+  python3 -m tarfile -e "$tmpdir/zig.tar.xz" "$tmpdir"
+  rm -rf "$install_dir"
   mv "$tmpdir/zig-$arch-$os-$version" "$install_dir"
   rm -rf "$tmpdir"
   trap - EXIT INT TERM

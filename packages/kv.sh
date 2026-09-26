@@ -30,7 +30,7 @@ install() {
   url="https://github.com/audivir/kv/releases/download/v$version/kv-$arch-$os"
   tmpfile="$(mktemp)"
   trap 'rm -f "$tmpfile"' EXIT INT TERM
-  curl_or_wget "$url" -o "$tmpfile"
+  curl_or_wget "$url" "$tmpfile"
   chmod +x "$tmpfile"
   mv "$tmpfile" "$local_bin"
   trap - EXIT INT TERM

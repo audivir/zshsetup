@@ -146,25 +146,15 @@ __init_zshsetup() {
   fi
   # END HOMEBREW
 
-  # BEGIN ZIG
-  if [ -n "$ZSHSETUP_REQUIRE_ZIG" ] && ! __available zig; then
-    __package_manager zig || return 1
+  # BEGIN PYTHON
+  if ! __available uv; then
+    __package_manager uv || return 1
   fi
-  # END ZIG
-
-  # BEGIN GAWK
-  if ! __available gawk; then
-    # zig and make are only needed to build gawk from source
-    # cc and make are run, since macOS ships shims for them without the Command Line Tools
-    if ! 2>/dev/null >/dev/null cc --version && ! __available zig; then
-      __package_manager zig || return 1
-    fi
-    if ! 2>/dev/null >/dev/null make --version; then
-      __package_manager make || return 1
-    fi
-    __package_manager gawk || return 1
+  if ! __available uvc; then
+    __package_manager uvc || return 1
   fi
-  # END GAWK
+  __source command uvc shell zsh || return 1
+  # END PYTHON
 
   # BEGIN JQ
   if ! __available jq; then
@@ -172,6 +162,12 @@ __init_zshsetup() {
   fi
   # END JQ
 
+  # BEGIN GAWK
+  if ! __available gawk; then
+    __package_manager gawk || return 1
+  fi
+  # END GAWK
+  #
   # BEGIN MICROMAMBA
   if ! __available micromamba; then
     __package_manager micromamba || return 1
@@ -201,15 +197,11 @@ __init_zshsetup() {
   fi
   # END RUST
 
-  # BEGIN PYTHON
-  if ! __available uv; then
-    __package_manager uv || return 1
+  # BEGIN ZIG
+  if [ -n "$ZSHSETUP_REQUIRE_ZIG" ] && ! __available zig; then
+    __package_manager zig || return 1
   fi
-  if ! __available uvc; then
-    __package_manager uvc || return 1
-  fi
-  __source command uvc shell zsh || return 1
-  # END PYTHON
+  # END ZIG
 
   # BEGIN JAVASCRIPT
   export BUN_INSTALL="$XDG_DATA_HOME/bun"
@@ -259,7 +251,7 @@ __install_zshsetup() {
   if [ -d "$ZSHSETUP_HOME" ]; then
     __assure_link "$HOME/.zshrc" "$ZSHSETUP_HOME/.zshrc" || return 1
     __eprint "$ZSHSETUP_HOME already exists, updating instead"
-    __update_zshsetup
+    update_zshsetup
     return 0
   fi
   trap 'rm -rf "$ZSHSETUP_HOME"' EXIT INT TERM
@@ -267,7 +259,14 @@ __install_zshsetup() {
     __eprint "Failed to clone $ZSHSETUP_REPO to $ZSHSETUP_HOME"
     return 1
   fi
-  __assure_link "$HOME/.zshrc" "$ZSHSETUP_HOME/.zshrc" || return 1
+  if ! __assure_link "$HOME/.zshrc" "$ZSHSETUP_HOME/.zshrc"; then
+    __eprint "Failed to link .zshrc"
+    return 1
+  fi
+  if ! __init_zshsetup; then
+    __eprint "Failed to initialize zsh"
+    return 1
+  fi
   trap - EXIT INT TERM
   __eprint "zshsetup installed and linked"
   return 0
@@ -286,7 +285,7 @@ update_zshsetup() {
   popd || true
 
   local packages
-  packages=(zig make gawk jq micromamba go rustup uv uvc bun bat micro kv)
+  packages=(zig make gawk jq micromamba go rustup uv python3 uvc bun bat micro kv)
   for p in "${packages[@]}"; do
     "$ZSHSETUP_HOME/packages/$p.sh" upgrade
   done

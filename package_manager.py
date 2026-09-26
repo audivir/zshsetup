@@ -67,7 +67,7 @@ def package_manager(manual_pkg: str, brew_pkg: str, apt_pkg: str) -> None:  # no
     choice = create_menu(*options)
     if not choice:
         raise ValueError("Install choice cancelled")
-    print(choice)  # noqa: T201
+    eprint(choice)
 
     env = os.environ.copy()
     postinstall_script: Path | None = None

@@ -31,7 +31,7 @@ install() {
   url="https://github.com/oven-sh/bun/releases/download/bun-v$version/bun-$os-$arch.zip"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
-  curl_or_wget "$url" -o "$tmpdir/bun.zip"
+  curl_or_wget "$url" "$tmpdir/bun.zip"
   python3 -m zipfile -e "$tmpdir/bun.zip" "$tmpdir"
   chmod +x "$tmpdir/bun-$os-$arch/bun"
   mv "$tmpdir/bun-$os-$arch/bun" "$local_bin"

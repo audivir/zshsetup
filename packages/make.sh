@@ -17,8 +17,7 @@ check() {
 
 # fetches the latest version
 fetch() {
-  require_cmd curl || return 1
-  curl --fail-with-body -sL "https://ftp.gnu.org/gnu/make/" \
+  curl_or_wget "https://ftp.gnu.org/gnu/make/" \
     | grep -o 'make-[0-9.]*\.tar\.gz"' \
     | sed 's/^make-//; s/\.tar\.gz"$//' \
     | sort -t. -k1,1n -k2,2n -k3,3n \
@@ -28,26 +27,19 @@ fetch() {
 # installs the most recent version
 # build.sh bootstraps make without an existing make, using the system compiler or zig
 install() {
-  require_cmd curl tar || return 1
-  local version url tmpdir cc
-  # TODO: move to cc
+  require_cmd zig || return 1
+  local version url tmpdir
   version="$1"
-  if 2>/dev/null >/dev/null cc --version; then
-    cc="cc"
-  elif 2>/dev/null >/dev/null zig version; then
-    cc="zig cc"
-  else
-    echo "cc or zig is required to build $name" >&2
-    return 1
-  fi
   url="https://ftp.gnu.org/gnu/make/make-$version.tar.gz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
   curl_or_wget "$url" | tar -xzC "$tmpdir"
   (
     cd "$tmpdir/make-$version"
-    CC="$cc" ./configure --disable-nls --without-guile >/dev/null
-    sh build.sh >/dev/null
+    ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="zig cc" LD="zig cc" \
+      ./configure --disable-nls --disable-dependency-tracking --without-guile >/dev/null
+    ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="zig cc" LD="zig cc" \
+      sh build.sh >/dev/null
   )
   mv "$tmpdir/make-$version/make" "$local_bin"
   rm -rf "$tmpdir"

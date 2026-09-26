@@ -6,8 +6,8 @@ set -euo pipefail
 . "$ZSHSETUP_HOME/packages/helper.sh"
 
 name="python3"
-brew=""
-apt=""
+brew="python3"
+apt="python3"
 local_bin="$XDG_BIN_HOME/python3"
 
 # checks the currently installed version, echoes "" if not installed

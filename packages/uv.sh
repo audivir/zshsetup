@@ -27,7 +27,6 @@ install() {
     mv "$ZSHSETUP_BOOTSTRAP_UV_DIR/uvx" "$XDG_BIN_HOME/uvx"
     return 0
   fi
-  require_cmd tar || return 1
   local version url tmpdir
   version="$1"
   set_os_arch "unknown-linux-gnu" "x86_64" "unknown-linux-gnu" "aarch64" "apple-darwin" "aarch64"

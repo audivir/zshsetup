@@ -2,18 +2,54 @@
 # shellcheck shell=bash
 set -euo pipefail
 
-packages=(zig make gawk jq micromamba go rustup uv uvc bun bat micro kv)
+packages=(zig make gawk jq micromamba go rustup uv python3 uvc bun bat micro kv)
+
+__available_python3() {
+  local py
+  py="$(command -v python3 2>/dev/null)" || return 1
+  if [[ "$OSTYPE" == darwin* ]] && [ "$py" = "/usr/bin/python3" ] && ! /usr/bin/xcode-select -p >/dev/null 2>&1; then
+    return 1
+  fi
+  "$py" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' >/dev/null 2>&1
+}
+
+__available_cmd() {
+  local cmd="$1"
+  if [ "$cmd" = "python3" ]; then
+    __available_python3
+  else
+    command -v "$cmd" >/dev/null 2>&1
+  fi
+}
+
+__bootstrap_python3() {
+  local url python_tmpdir
+  set_os_arch "unknown-linux-gnu" "x86_64" "unknown-linux-gnu" "aarch64" "apple-darwin" "aarch64"
+  url="https://github.com/astral-sh/python-build-standalone/releases/download/20260924/cpython-3.12.14+20260924-$arch-$os-install_only_stripped.tar.gz"
+  python_tmpdir=$(mktemp -d)
+  trap 'rm -rf "$python_tmpdir"' EXIT INT TERM
+  curl_or_wget "$url" | tar -xzC "$python_tmpdir"
+  PATH="$python_tmpdir/python/bin:$PATH" "$python_tmpdir/python/bin/python3" "$@"
+  rm -rf "$python_tmpdir"
+  trap - EXIT INT TERM
+}
 
 package_manager() {
-  python3 "$ZSHSETUP_HOME/package_manager.py" "$@"
+  if ! __available_python3; then
+    __bootstrap_python3 "$ZSHSETUP_HOME/package_manager.py" "$@"
+  else
+    python3 "$ZSHSETUP_HOME/package_manager.py" "$@"
+  fi
 }
 
 require_cmd() {
   local cmd
   for cmd in "$@"; do
-    if ! command -v "$cmd" >/dev/null 2>&1; then
-      if (( ${packages[(Ie)$cmd]} )); then
-          "$ZSHSETUP_HOME/packages/$cmd.sh" package
+    if ! __available_cmd "$cmd"; then
+      if ((${packages[(Ie)$cmd]})) \
+        && "$ZSHSETUP_HOME/packages/$cmd.sh" package \
+        && __available_cmd "$cmd"; then
+        continue
       fi
       echo "Required command not found: $cmd (needed by ${name:-package})" >&2
       return 1
@@ -29,15 +65,15 @@ curl_or_wget() {
 
   if command -v curl >/dev/null 2>&1; then
     if [ -n "$dest" ]; then
-      curl --fail-with-body -SL "$url" -o "$dest"
+      curl --fail-with-body -sSL "$url" -o "$dest"
     else
-      curl --fail-with-body -SL "$url"
+      curl --fail-with-body -sSL "$url"
     fi
   elif command -v wget >/dev/null 2>&1; then
     if [ -n "$dest" ]; then
-      wget -O "$dest" "$url"
+      wget -qO "$dest" "$url"
     else
-      wget -O - "$url"
+      wget -qO - "$url"
     fi
   else
     echo "curl or wget is required (needed by ${name:-package})" >&2

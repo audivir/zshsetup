@@ -24,7 +24,6 @@ fetch() {
 
 # installs the most recent version
 install() {
-  require_cmd tar || return 1
   local version url
   version="$1"
   set_os_arch "linux" "64" "linux" "-arm64" "macos" "-arm64"

@@ -17,7 +17,7 @@ check() {
 
 # fetches the latest version
 fetch() {
-  curl --fail-with-body -sL "https://ftp.gnu.org/gnu/gawk/" \
+  curl_or_wget "https://ftp.gnu.org/gnu/gawk/" \
     | grep -o 'gawk-[0-9.]*\.tar\.xz"' \
     | sed 's/^gawk-//; s/\.tar\.xz"$//' \
     | sort -t. -k1,1n -k2,2n -k3,3n \
@@ -27,28 +27,20 @@ fetch() {
 # installs the most recent version
 # GNU only ships sources, so build them with the system compiler or zig
 install() {
-  require_cmd make cc || return 1
-  local version url tmpdir cc
+  require_cmd make zig python3 || return 1
+  local version url tmpdir
   version="$1"
-  # TODO: move this to a own cc package!
-  if 2>/dev/null >/dev/null cc --version; then
-    cc="cc"
-  elif 2>/dev/null >/dev/null zig version; then
-    cc="zig cc"
-  else
-    echo "cc or zig is required to build $name" >&2
-    return 1
-  fi
   url="https://ftp.gnu.org/gnu/gawk/gawk-$version.tar.xz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
-  curl_or_wget "$url" | tar -xJC "$tmpdir"
+  curl_or_wget "$url" "$tmpdir/gawk.tar.xz"
+  python3 -m tarfile -e "$tmpdir/gawk.tar.xz" "$tmpdir"
   (
     cd "$tmpdir/gawk-$version"
     # zig cannot link the loadable extensions as macOS bundles
-    ARFLAGS="cr" CC="$cc" ./configure --disable-nls --disable-pma --disable-extensions \
+    ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="zig cc" LD="zig cc" ./configure --disable-nls --disable-dependency-tracking --disable-pma --disable-extensions \
       --without-readline --without-mpfr >/dev/null
-    make -j4 ARFLAGS="cr" >/dev/null
+    make -j4 ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="zig cc" LD="zig cc" >/dev/null
   )
   mv "$tmpdir/gawk-$version/gawk" "$local_bin"
   rm -rf "$tmpdir"

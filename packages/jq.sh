@@ -26,8 +26,6 @@ fetch() {
     local_bin="$jq_tmpdir/jq" install jq-1.8.0
     export PATH="$jq_tmpdir:$PATH"
   fi
-  echo "here"
-  command -v jq && echo 1 || echo 2
   get_latest_github "jqlang/jq"
   if [ -n "$jq_tmpdir" ]; then
     rm -rf "$jq_tmpdir"
@@ -43,7 +41,7 @@ install() {
   url="https://github.com/jqlang/jq/releases/download/$version/jq-$os-$arch"
   tmpfile=$(mktemp)
   trap 'rm -f "$tmpfile"' EXIT INT TERM
-  curl_or_wget "$url" -o "$tmpfile"
+  curl_or_wget "$url" "$tmpfile"
   chmod +x "$tmpfile"
   mv "$tmpfile" "$local_bin"
   trap - EXIT INT TERM

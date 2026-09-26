@@ -15,7 +15,7 @@ tools are installed on shell start, either with Homebrew, APT, or a manual insta
 ## Installation
 
 ```bash
-(command -v curl >/dev/null 2>&1 && curl --fail-with-body -sSL https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh || wget -q -O - https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh) | sh
+(command -v curl >/dev/null 2>&1 && curl --fail-with-body -SL https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh || wget -O - https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh) | sh
 ```
 
 This clones the repo to `~/.config/zshsetup` and links `~/.zshrc` to its `.zshrc`.

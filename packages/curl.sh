@@ -22,17 +22,19 @@ fetch() {
 
 # installs the most recent version
 install() {
-    local version url
-    version="$1"
-    set_os_arch "linux" "x86_64-glibc" "linux" "aarch64-glibc" "macos" "arm64"
-    url="https://github.com/stunnel/static-curl/releases/download/$version/curl-$os-$arch-$version.tar.xz"
-    tmpfile="$(mktemp)"
-    trap 'rm -f "$tmpfile"' EXIT INT TERM
-    curl_or_wget "$url" | tar -xJO "curl" >"$tmpfile"
-    chmod +x "$tmpfile"
-    mv "$tmpfile" "$local_bin"
-    rm -f "$tmpfile"
-    trap - EXIT INT TERM
+  require_cmd python3 || return 1
+  local version url tmpdir
+  version="$1"
+  set_os_arch "linux" "x86_64-glibc" "linux" "aarch64-glibc" "macos" "arm64"
+  url="https://github.com/stunnel/static-curl/releases/download/$version/curl-$os-$arch-$version.tar.xz"
+  tmpdir="$(mktemp -d)"
+  trap 'rm -rf "$tmpdir"' EXIT INT TERM
+  curl_or_wget "$url" "$tmpdir/curl.tar.xz"
+  python3 -m tarfile -e "$tmpdir/curl.tar.xz" "$tmpdir"
+  chmod +x "$tmpdir/curl"
+  mv "$tmpdir/curl" "$local_bin"
+  rm -rf "$tmpdir"
+  trap - EXIT INT TERM
 }
 
 # uninstalls the installed package

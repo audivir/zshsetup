@@ -17,16 +17,15 @@ check() {
 
 # fetches the latest version
 fetch() {
-  require_cmd curl jq || return 1
+  require_cmd jq || return 1
   local url
   url="https://api.github.com/repos/rust-lang/rustup/tags"
-  curl --fail-with-body -sL "$url" | jq -r '.[0].name'
+  curl_or_wget "$url" | jq -r '.[0].name'
 }
 
 # installs the most recent version
 install() {
-  require_cmd curl sh || return 1
-  curl --fail-with-body -L "https://sh.rustup.rs" | sh -s -- \
+  curl_or_wget "https://sh.rustup.rs" | sh -s -- \
     --default-toolchain "${ZSHSETUP_RUST_TOOLCHAIN:-stable}" \
     --no-update-default-toolchain \
     --no-modify-path -y
