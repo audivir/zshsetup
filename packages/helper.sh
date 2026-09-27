@@ -2,7 +2,7 @@
 # shellcheck shell=bash
 set -euo pipefail
 
-packages=(zig make gawk jq micromamba go rustup uv python3 uvc bun bat micro kv)
+packages=(curl zig make gawk jq micromamba go rustup uv python3 uvc bun bat micro kv)
 
 __available_python3() {
   local py
@@ -75,8 +75,32 @@ curl_or_wget() {
     else
       wget -qO - "$url"
     fi
+  elif command -v python3 >/dev/null 2>&1; then
+    python3 -c 'import os, shutil, sys, urllib.request
+try:
+    with urllib.request.urlopen(sys.argv[1]) as res:
+        if len(sys.argv) > 2 and sys.argv[2]:
+            with open(sys.argv[2], "wb") as f:
+                shutil.copyfileobj(res, f)
+        else:
+            shutil.copyfileobj(res, sys.stdout.buffer)
+except Exception:
+    if len(sys.argv) > 2 and sys.argv[2] and os.path.exists(sys.argv[2]):
+        os.remove(sys.argv[2])
+    sys.exit(1)' "$url" "$dest"
+  elif [ -x "/usr/lib/apt/apt-helper" ]; then
+    local tmp
+    tmp="${dest:-$(mktemp)}"
+    if ! /usr/lib/apt/apt-helper -o Acquire::https::Verify-Peer=false download-file "$url" "$tmp" >/dev/null 2>&1; then
+      [ -z "$dest" ] && rm -f "$tmp"
+      return 1
+    fi
+    if [ -z "$dest" ]; then
+      cat "$tmp"
+      rm -f "$tmp"
+    fi
   else
-    echo "curl or wget is required (needed by ${name:-package})" >&2
+    echo "curl, wget, python3, or apt-helper is required (needed by ${name:-package})" >&2
     return 1
   fi
 }

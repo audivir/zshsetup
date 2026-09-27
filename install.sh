@@ -13,8 +13,18 @@ __download() {
     curl --fail-with-body -sSL "$url"
   elif command -v wget >/dev/null 2>&1; then
     wget -q -O - "$url"
+  elif command -v python3 >/dev/null 2>&1; then
+    python3 -c 'import shutil, sys, urllib.request; res = urllib.request.urlopen(sys.argv[1]); shutil.copyfileobj(res, sys.stdout.buffer)' "$url"
+  elif [ -x "/usr/lib/apt/apt-helper" ]; then
+    tmp="$(mktemp)"
+    if ! /usr/lib/apt/apt-helper -o Acquire::https::Verify-Peer=false download-file "$url" "$tmp" >/dev/null 2>&1; then
+      rm -f "$tmp"
+      exit 1
+    fi
+    cat "$tmp"
+    rm -f "$tmp"
   else
-    echo "curl or wget required!" >&2
+    echo "curl, wget, python3, or apt-helper required!" >&2
     exit 1
   fi
 }
@@ -29,8 +39,8 @@ if [ "$(uname)" = "Darwin" ] && [ "$(uname -m)" != "arm64" ]; then
   exit 1
 fi
 
-if { ! __available curl --help && ! __available wget --help; } || ! __available git --help; then
-  echo "curl (or wget) and git required!"
+if { ! __available curl --help && ! __available wget --help && [ ! -x /usr/lib/apt/apt-helper ] && ! __available python3 --version; } || ! __available git --help; then
+  echo "curl (or wget/apt-helper/python3) and git required!"
   exit 1
 fi
 

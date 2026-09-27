@@ -35,7 +35,7 @@ install() {
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
   curl_or_wget "$url" "$tmpdir/zig.tar.xz"
-  python3 -m tarfile -e "$tmpdir/zig.tar.xz" "$tmpdir"
+  python3 -m tarfile --filter data -e "$tmpdir/zig.tar.xz" "$tmpdir"
   rm -rf "$install_dir"
   mv "$tmpdir/zig-$arch-$os-$version" "$install_dir"
   rm -rf "$tmpdir"

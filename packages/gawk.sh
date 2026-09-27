@@ -34,13 +34,13 @@ install() {
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
   curl_or_wget "$url" "$tmpdir/gawk.tar.xz"
-  python3 -m tarfile -e "$tmpdir/gawk.tar.xz" "$tmpdir"
+  python3 -m tarfile --filter data -e "$tmpdir/gawk.tar.xz" "$tmpdir"
   (
     cd "$tmpdir/gawk-$version"
     # zig cannot link the loadable extensions as macOS bundles
-    ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="zig cc" LD="zig cc" ./configure --disable-nls --disable-dependency-tracking --disable-pma --disable-extensions \
+    ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="zig cc -w" LD="zig cc" ./configure --disable-nls --disable-dependency-tracking --disable-pma --disable-extensions \
       --without-readline --without-mpfr >/dev/null
-    make -j4 ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="zig cc" LD="zig cc" >/dev/null
+    make -j4 ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="zig cc -w" LD="zig cc" >/dev/null
   )
   mv "$tmpdir/gawk-$version/gawk" "$local_bin"
   rm -rf "$tmpdir"

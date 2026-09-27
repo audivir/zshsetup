@@ -36,9 +36,9 @@ install() {
   curl_or_wget "$url" | tar -xzC "$tmpdir"
   (
     cd "$tmpdir/make-$version"
-    ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="zig cc" LD="zig cc" \
+    ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="zig cc -w" LD="zig cc" \
       ./configure --disable-nls --disable-dependency-tracking --without-guile >/dev/null
-    ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="zig cc" LD="zig cc" \
+    ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="zig cc -w" LD="zig cc" \
       sh build.sh >/dev/null
   )
   mv "$tmpdir/make-$version/make" "$local_bin"

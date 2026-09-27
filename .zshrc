@@ -144,7 +144,11 @@ __init_zshsetup() {
     __source /opt/homebrew/bin/brew shellenv || return 1
     alias homebrewupdate='brew update; brew upgrade --formulae --yes && brew cu --yes && cd /opt/homebrew && git stash pop &>/dev/null || true && cd -'
   fi
-  # END HOMEBREW
+  # BEGIN CURL
+  if ! __available curl && ! __available wget; then
+    __package_manager curl || return 1
+  fi
+  # END CURL
 
   # BEGIN PYTHON
   if ! __available uv; then
@@ -285,7 +289,7 @@ update_zshsetup() {
   popd || true
 
   local packages
-  packages=(zig make gawk jq micromamba go rustup uv python3 uvc bun bat micro kv)
+  packages=(curl zig make gawk jq micromamba go rustup uv python3 uvc bun bat micro kv)
   for p in "${packages[@]}"; do
     "$ZSHSETUP_HOME/packages/$p.sh" upgrade
   done
