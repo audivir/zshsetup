@@ -22,9 +22,9 @@ fetch() {
   github_api "repos/rust-lang/rustup/tags" | jq -r '.[0].name'
 }
 
-# Rust links with cc, which bare systems lack, so a zig wrapper serves as one;
-# musl toolchains also need libgcc_s, see packages/musl-libs.sh
-install_linux_support() {
+# Rust links with cc, which bare systems (and macOS without developer tools) lack, so a zig
+# wrapper serves as one; musl toolchains also need libgcc_s, see packages/musl-libs.sh
+install_cc_support() {
   if [ "$(__libc)" = "musl" ] && [ ! -e /usr/lib/libgcc_s.so.1 ]; then
     require_cmd musl-libs || return 1
   fi
@@ -40,9 +40,7 @@ install_linux_support() {
 
 # installs the most recent version
 install() {
-  if [ "$(uname)" = "Linux" ]; then
-    install_linux_support || return 1
-  fi
+  install_cc_support || return 1
   curl -fsSL "https://sh.rustup.rs" | sh -s -- \
     --default-toolchain "${ZSHSETUP_RUST_TOOLCHAIN:-stable}" \
     --no-update-default-toolchain \

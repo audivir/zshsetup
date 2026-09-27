@@ -5,12 +5,16 @@ set -euo pipefail
 . "$ZSHSETUP_HOME/packages/packages.sh"
 
 # macOS' /usr/bin/python3 is a stub that opens the developer tools dialog without them
+# checks for macOS's stubs in /usr/bin (git, make, cc, python3, ...), which only offer to install
+# the developer tools while they are missing
+__xcode_stub() {
+  [[ "$OSTYPE" == darwin* ]] && [[ "$1" -ef /usr/bin/cc ]] && ! /usr/bin/xcode-select -p >/dev/null 2>&1
+}
+
 __usable_python3() {
   local py
   py="$(command -v python3 2>/dev/null)" || return 1
-  if [[ "$OSTYPE" == darwin* ]] && [ "$py" = "/usr/bin/python3" ] && ! /usr/bin/xcode-select -p >/dev/null 2>&1; then
-    return 1
-  fi
+  ! __xcode_stub "$py"
 }
 
 __available_python3() {
@@ -23,7 +27,8 @@ __available_cmd() {
   if [ "$cmd" = "python3" ]; then
     __available_python3
   else
-    command -v "$cmd" >/dev/null 2>&1
+    local cmd_path
+    cmd_path="$(command -v "$cmd" 2>/dev/null)" && ! __xcode_stub "$cmd_path"
   fi
 }
 

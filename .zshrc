@@ -80,7 +80,12 @@ __source() {
 
 # looks up the executable without running it, ignoring functions and aliases
 __available() {
-  whence -p "$1" &>/dev/null
+  local cmd_path
+  cmd_path="$(whence -p "$1")" || return 1
+  # macOS's stubs in /usr/bin (git, make, cc, ...) only offer to install the missing developer tools
+  if [[ "$OSTYPE" == darwin* ]] && [[ "$cmd_path" -ef /usr/bin/cc ]] && ! /usr/bin/xcode-select -p &>/dev/null; then
+    return 1
+  fi
 }
 
 __init_cache() {
@@ -231,7 +236,7 @@ __init_zshsetup() {
   export RUSTUP_HOME="$XDG_DATA_HOME/rustup"
   export CARGO_HOME="$XDG_DATA_HOME/cargo"
   __require rustup
-  # see install_linux_support in packages/rustup.sh
+  # see install_cc_support in packages/rustup.sh
   if [ -d "$XDG_DATA_HOME/rustup-cc" ]; then
     __available cc || PATH="$XDG_DATA_HOME/rustup-cc/bin:$PATH"
     [ -e "/lib/ld-musl-$(uname -m).so.1" ] \

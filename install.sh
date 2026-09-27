@@ -4,6 +4,10 @@
 __available() {
   cmd="$1"
   shift
+  # macOS's stubs in /usr/bin (git, make, cc, ...) only offer to install the missing developer tools
+  if [ "$(uname)" = "Darwin" ] && [ "$(command -v "$cmd")" -ef /usr/bin/cc ] && ! /usr/bin/xcode-select -p >/dev/null 2>&1; then
+    return 1
+  fi
   command "$cmd" "$@" >/dev/null 2>&1
 }
 

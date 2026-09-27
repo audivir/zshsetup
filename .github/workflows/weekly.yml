@@ -29,11 +29,23 @@ jobs:
         env:
           ZSHSETUP_GH_TOKEN: ${{ github.token }}
   macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        developer-tools: [true, false]
+    name: macos (developer tools ${{ matrix.developer-tools && 'installed' || 'missing' }})
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v7
       - name: Remove Homebrew
         run: sudo rm -rf /opt/homebrew /usr/local/Homebrew
+      - name: Move the developer tools away
+        if: ${{ !matrix.developer-tools }}
+        run: |
+          sudo mkdir /tmp/developer
+          sudo mv /Applications/Xcode*.app /Library/Developer/CommandLineTools /tmp/developer/
+          sudo xcode-select --reset || true
+          ! xcode-select -p
       - run: |
           env -i HOME="$HOME" USER="$USER" TERM=dumb PATH=/usr/bin:/bin:/usr/sbin:/sbin \
             ZSHSETUP_GH_TOKEN="$ZSHSETUP_GH_TOKEN" ./tests/run_tests.sh --native all

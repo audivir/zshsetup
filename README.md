@@ -89,8 +89,10 @@ which is installed first if missing:
   patches new environments with `patchelf`; it also handles `micromamba run` (with `-n`/`-p`).
 - musl: `make` and `gawk` are built statically, as zig misaligns `environ` when linking musl
   dynamically on aarch64.
-- Linux: Rust links with `cc`; without one, `rustup` puts a zig `cc` wrapper into
-  `~/.local/share/rustup-cc`, which `.zshrc` only uses if the system has no `cc`.
+- Rust links with `cc`; without one (bare Linux, macOS without developer tools), `rustup` puts a
+  zig `cc` wrapper into `~/.local/share/rustup-cc`, which `.zshrc` only uses if the system has no `cc`.
+- macOS without developer tools: the stubs in `/usr/bin` (`git`, `make`, `cc`, `python3`, ...) only
+  offer to install them, so they count as missing and the packages are installed instead.
 - musl: Rust toolchains need `libgcc_s` and `bun` needs `libstdc++`; without them on the system,
   the `musl-libs` package takes them from Alpine's packages (with `packages/musl/apk-extract`,
   without `apk` or root). `bun` finds them through its RUNPATH, Rust through `LD_LIBRARY_PATH`.
