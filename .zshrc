@@ -184,11 +184,19 @@ __init_zshsetup() {
   # END GAWK
   #
   # BEGIN MICROMAMBA
-  # micromamba and conda-forge packages need glibc
-  if [ ! -e /lib/ld-musl-x86_64.so.1 ] && [ ! -e /lib/ld-musl-aarch64.so.1 ] && __require micromamba; then
+  # micromamba and conda-forge packages need glibc, see packages/musl/micromamba
+  if { [ -n "$ZSHSETUP_REQUIRE_MICROMAMBA_ON_MUSL" ] || { [ ! -e /lib/ld-musl-x86_64.so.1 ] && [ ! -e /lib/ld-musl-aarch64.so.1 ]; }; } \
+    && __require micromamba; then
     alias conda='micromamba'
-    __source command micromamba shell hook --shell zsh
     export MAMBA_ROOT_PREFIX="$XDG_DATA_HOME/micromamba"
+    if [ -d "$XDG_DATA_HOME/micromamba-musl" ]; then
+      # the hook calls the real binary by path, but the wrapper also patches new programs for glibc
+      local hook real_exe
+      real_exe="$XDG_DATA_HOME/micromamba-musl/micromamba"
+      hook="$(command micromamba shell hook --shell zsh)" && eval "${hook//$real_exe/$XDG_BIN_HOME/micromamba}"
+    else
+      __source command micromamba shell hook --shell zsh
+    fi
   fi
   # END MICROMAMBA
 
@@ -251,6 +259,22 @@ __init_zshsetup() {
   # END CUSTOM FUNCTIONS
 }
 
+# keeps the ZSHSETUP_* settings given at installation for later shells
+# shellcheck disable=SC2296
+__save_settings() {
+  local preinit var
+  preinit="$ZSHSETUP_HOME/preinit.zsh"
+  if [ ! -f "$preinit" ]; then
+    printf '#!/usr/bin/env zsh\n# shellcheck shell=bash\n' >"$preinit" || return 1
+    chmod +x "$preinit" || return 1
+  fi
+  for var in ZSHSETUP_CHOICE ZSHSETUP_IGNORESCRATCH ZSHSETUP_REQUIRE_ZIG ZSHSETUP_REQUIRE_MICROMAMBA_ON_MUSL ZSHSETUP_RUST_TOOLCHAIN; do
+    if [ -n "${(P)var}" ]; then
+      echo "export $var=${(q)${(P)var}}" >>"$preinit" || return 1
+    fi
+  done
+}
+
 # installs zshsetup from github
 __install_zshsetup() {
   if [ -d "$ZSHSETUP_HOME" ]; then
@@ -266,6 +290,10 @@ __install_zshsetup() {
   fi
   if ! __assure_link "$HOME/.zshrc" "$ZSHSETUP_HOME/.zshrc"; then
     __eprint "Failed to link .zshrc"
+    return 1
+  fi
+  if ! __save_settings; then
+    __eprint "Failed to save settings to preinit.zsh"
     return 1
   fi
   if ! __init_zshsetup; then
@@ -292,7 +320,7 @@ update_zshsetup() {
   rm -rf "$ZSHSETUP_HOME/failed"
 
   local packages
-  packages=(curl git zig make gawk jq micromamba go rustup uv python3 uvc bun bat micro kv zstd)
+  . "$ZSHSETUP_HOME/packages/packages.sh"
   for p in "${packages[@]}"; do
     "$ZSHSETUP_HOME/packages/$p.sh" upgrade
   done
@@ -383,7 +411,7 @@ __init_zshsetup || return 1
 
 # CLEANUP
 unfunction __assure_link __assure_dir __package_manager __require __source __available
-unfunction __init_cache __init_zshsetup_env __init_zshsetup __install_zshsetup
+unfunction __init_cache __init_zshsetup_env __init_zshsetup __install_zshsetup __save_settings
 
 # SOURCE POST-INIT
 if [ ! -f "$ZSHSETUP_HOME/postinit.zsh" ]; then

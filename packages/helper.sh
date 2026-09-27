@@ -2,7 +2,7 @@
 # shellcheck shell=bash
 set -euo pipefail
 
-packages=(curl git zig make gawk jq micromamba go rustup uv python3 uvc bun bat micro kv zstd)
+. "$ZSHSETUP_HOME/packages/packages.sh"
 
 __available_python3() {
   local py

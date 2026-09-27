@@ -58,13 +58,15 @@ The following packages have bootstrap scripts in `packages/`:
 - `curl`: Command-line tool for transferring data with URLs (requires `jq`, `python3`)
 - `gawk`: GNU Awk text processing utility (requires `make`, `zig`, `python3`)
 - `git`: Distributed version control system (requires `jq`)
+- `glibc`: User-space glibc for musl hosts, from conda-forge's sysroot (requires `jq`, `python3`, `zstd`)
 - `go`: The Go programming language toolchain
 - `jq`: Command-line JSON processor
 - `kv`: Key-value storage CLI (requires `jq`)
 - `make`: GNU Make build automation tool (requires `zig`)
 - `micro`: Modern terminal-based text editor (requires `jq`)
-- `micromamba`: Fast standalone conda package manager (requires `jq`)
+- `micromamba`: Fast standalone conda package manager (requires `jq`, and `glibc`, `patchelf` on musl)
 - `oh-my-zsh`: Community-driven zsh configuration framework (requires `git`, `zsh`)
+- `patchelf`: Modifies the loader and RPATH of ELF binaries (Linux only)
 - `python3`: Python programming language interpreter (requires `uv`)
 - `rustup`: Rust toolchain installer (requires `jq`, and `zig` on musl)
 - `uv`: Fast Python package and project manager (requires `jq`)
@@ -74,8 +76,9 @@ The following packages have bootstrap scripts in `packages/`:
 
 ## Platform Notes
 
-- musl (Alpine): `micromamba` is skipped, since it and all conda-forge packages need glibc,
-  which cannot be installed without root.
+- musl (Alpine): `micromamba` is skipped, since it and all conda-forge packages need glibc.
+  With `ZSHSETUP_REQUIRE_MICROMAMBA_ON_MUSL`, it runs with conda-forge's glibc, and a wrapper
+  patches new environments with `patchelf`; `micromamba run` does not work there, use `activate`.
 - musl: `make` and `gawk` are built statically, as zig misaligns `environ` when linking musl
   dynamically on aarch64.
 - musl: Rust toolchains need `libgcc_s` and a `cc`; `rustup` builds both with zig into
@@ -87,10 +90,15 @@ The following packages have bootstrap scripts in `packages/`:
 
 ## Environment Variables
 
+Set them already for the installation (e.g. `ZSHSETUP_CHOICE=manual sh`), the installer saves
+them to `preinit.zsh` for later shells.
+
 - `ZSHSETUP_CHOICE`: default package manager (`brew`, `apt`, or `manual`) instead of the menu.
 - `ZSHSETUP_IGNORESCRATCH`: do not move the cache directory to `/scratch/$USER/.cache`.
   A `~/.cache/.zshsetup_do_not_use_scratch` file does the same.
 - `ZSHSETUP_REQUIRE_ZIG`: install zig even if no other package requires it (when set and non-empty).
+- `ZSHSETUP_REQUIRE_MICROMAMBA_ON_MUSL`: install micromamba on musl with a user-space glibc
+  (when set and non-empty).
 - `ZSHSETUP_RUST_TOOLCHAIN`: default toolchain for a manual `rustup` install (`stable` if unset).
 
 ## License
