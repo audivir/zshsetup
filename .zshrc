@@ -64,6 +64,7 @@ __require() {
     ((EPOCHSECONDS - failed_at < 86400)) && return 1
   fi
   if __package_manager "$package" \
+    && rehash \
     && { __available "$package" || [ -n "$("$ZSHSETUP_HOME/packages/$package.sh" check 2>/dev/null)" ]; }; then
     rm -f "$marker"
     return 0

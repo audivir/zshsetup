@@ -101,8 +101,10 @@ require_cmd() {
   local cmd
   for cmd in "$@"; do
     if ! __available_cmd "$cmd" && ! __installed_package "$cmd"; then
+      # rehash, as zsh would otherwise keep running a command it found before, e.g. an old python3
       if ((${packages[(Ie)$cmd]})) \
         && "$ZSHSETUP_HOME/packages/$cmd.sh" package \
+        && rehash \
         && { __available_cmd "$cmd" || __installed_package "$cmd"; }; then
         continue
       fi
