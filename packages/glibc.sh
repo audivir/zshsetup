@@ -52,6 +52,11 @@ install() {
   zstd -dc "$tmpdir"/conda/pkg-*.tar.zst | tar -xC "$tmpdir/pkg"
   rm -rf "$install_dir"
   mv "$tmpdir"/pkg/*-conda-linux-gnu/sysroot "$install_dir"
+  # only the shared libraries are needed at runtime; glibc reads locales and gconv modules from the
+  # host's /usr/lib/locale and /usr/lib64/gconv, not from here
+  # shellcheck disable=SC2115
+  rm -rf "$install_dir/lib64/locale" "$install_dir/lib64/gconv" "$install_dir"/lib64/*.a "$install_dir"/lib64/*.o \
+    "$install_dir/usr/include" "$install_dir/usr/share"
   rm -rf "$tmpdir"
   trap - EXIT INT TERM
   ln -sf "$(echo "$install_dir"/lib64/ld-linux-*.so.*)" "$loader"

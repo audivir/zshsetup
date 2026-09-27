@@ -41,8 +41,10 @@ install_cc_support() {
 # installs the most recent version
 install() {
   install_cc_support || return 1
+  # the default profile without its offline docs, which take several hundred MB
   curl -fsSL "https://sh.rustup.rs" | sh -s -- \
     --default-toolchain "${ZSHSETUP_RUST_TOOLCHAIN:-stable}" \
+    --profile minimal --component rustfmt,clippy \
     --no-update-default-toolchain \
     --no-modify-path -y
 }
