@@ -60,7 +60,7 @@ The following packages have bootstrap scripts in `packages/`. All of them downlo
 which is installed first if missing:
 
 - `bat`: `cat` clone with syntax highlighting and Git integration (requires `jq`)
-- `bun`: Fast all-in-one JavaScript/TypeScript runtime and toolkit (requires `jq`, `python3`, and `patchelf` on musl)
+- `bun`: Fast all-in-one JavaScript/TypeScript runtime and toolkit (requires `jq`, `python3`, and `patchelf`, `musl-libs` on musl)
 - `curl`: Command-line tool for transferring data with URLs (requires `jq`, `python3`)
 - `gawk`: GNU Awk text processing utility (requires `make`, `zig`, `python3`)
 - `git`: Distributed version control system (requires `jq`)
@@ -71,10 +71,11 @@ which is installed first if missing:
 - `make`: GNU Make build automation tool (requires `zig`)
 - `micro`: Modern terminal-based text editor (requires `jq`)
 - `micromamba`: Fast standalone conda package manager (requires `jq`, and `glibc`, `patchelf` on musl)
+- `musl-libs`: GCC's `libstdc++` and `libgcc_s` for musl, from Alpine's packages (requires `patchelf`)
 - `oh-my-zsh`: Community-driven zsh configuration framework (requires `git`, `zsh`)
 - `patchelf`: Modifies the loader and RPATH of ELF binaries (Linux only)
 - `python3`: Python programming language interpreter (requires `uv`)
-- `rustup`: Rust toolchain installer (requires `jq`, and `zig` on musl)
+- `rustup`: Rust toolchain installer (requires `jq`, `zig` without a `cc`, and `musl-libs` on musl)
 - `uv`: Fast Python package and project manager (requires `jq`)
 - `uvc`: Python command wrapper and cache tool (requires `python3`)
 - `zig`: Zig compiler and toolchain (requires `python3`)
@@ -87,16 +88,18 @@ which is installed first if missing:
   patches new environments with `patchelf`; it also handles `micromamba run` (with `-n`/`-p`).
 - musl: `make` and `gawk` are built statically, as zig misaligns `environ` when linking musl
   dynamically on aarch64.
-- musl: Rust toolchains need `libgcc_s` and a `cc`; `rustup` puts GCC's `libgcc_s` and a zig
-  `cc` wrapper into `~/.local/share/rustup-musl`, and `.zshrc` only uses them if the system has none.
-- musl: `bun` needs `libstdc++` and `libgcc`; without them on the system, they are taken from
-  Alpine's packages into `~/.local/share/bun-musl`, and `bun` finds them through its RUNPATH.
-  `packages/musl/apk-extract` extracts Alpine packages like these without `apk` or root.
+- Linux: Rust links with `cc`; without one, `rustup` puts a zig `cc` wrapper into
+  `~/.local/share/rustup-cc`, which `.zshrc` only uses if the system has no `cc`.
+- musl: Rust toolchains need `libgcc_s` and `bun` needs `libstdc++`; without them on the system,
+  the `musl-libs` package takes them from Alpine's packages (with `packages/musl/apk-extract`,
+  without `apk` or root). `bun` finds them through its RUNPATH, Rust through `LD_LIBRARY_PATH`.
+- Old glibc (CentOS 7, RHEL 8): `uv` (glibc 2.28) and `bat` (2.18) use their static musl builds
+  where the system cannot run the gnu builds, and zig builds for the system's glibc.
 - Without `curl`: the static `curl` is bootstrapped with `wget`, `python3`, or `apt-helper`
   (bare Debian/Ubuntu, without TLS verification) and checked against pinned SHA-256 hashes.
   Its musl build is used on all Linux, as the glibc one crashes on older glibc (CentOS 7).
-- Without system CA certificates, `GIT_SSL_CAPATH` points `git` at the Mozilla certificates
-  bundled with [git-static](https://github.com/audivir/git-static).
+- Without system CA certificates, `GIT_SSL_CAPATH` and `MAMBA_SSL_VERIFY` point `git` and
+  `micromamba` at the Mozilla certificates bundled with [git-static](https://github.com/audivir/git-static).
 - A failed install is skipped for a day (see `failed/`); retry with `install_manual <package>`.
 
 ## Environment Variables

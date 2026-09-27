@@ -51,6 +51,8 @@ __require() {
   disable_var="ZSHSETUP_DISABLE_${${package:u}//-/_}"
   __available "$package" && return 0
   [ -n "${(P)disable_var}" ] && return 1
+  # packages without a command, like glibc
+  [ -n "$("$ZSHSETUP_HOME/packages/$package.sh" check 2>/dev/null)" ] && return 0
   # the marker holds the time of the failure
   local failed_at
   zmodload zsh/datetime
@@ -61,7 +63,8 @@ __require() {
     esac
     ((EPOCHSECONDS - failed_at < 86400)) && return 1
   fi
-  if __package_manager "$package" && __available "$package"; then
+  if __package_manager "$package" \
+    && { __available "$package" || [ -n "$("$ZSHSETUP_HOME/packages/$package.sh" check 2>/dev/null)" ]; }; then
     rm -f "$marker"
     return 0
   fi
@@ -147,9 +150,10 @@ __init_zshsetup_env() {
   export GNUPGHOME="$XDG_DATA_HOME/gnupg"
   export MPLCONFIGDIR="$XDG_CONFIG_HOME/matplotlib"
   export PYTHON_HISTORY="$XDG_DATA_HOME/python/python_history"
-  # without system certificates, git-static uses its bundled ones
+  # without system certificates, git and micromamba use the ones bundled with git-static
   if [ ! -e /etc/ssl/cert.pem ] && [ -z "$(ls -A /etc/ssl/certs 2>/dev/null)" ]; then
     export GIT_SSL_CAPATH="$LOCAL_HOME/share/git-core/certs"
+    export MAMBA_SSL_VERIFY="$GIT_SSL_CAPATH/cacert.pem"
   fi
 }
 
@@ -227,11 +231,15 @@ __init_zshsetup() {
   export RUSTUP_HOME="$XDG_DATA_HOME/rustup"
   export CARGO_HOME="$XDG_DATA_HOME/cargo"
   __require rustup
-  # see install_musl_support in packages/rustup.sh
-  if [ -d "$XDG_DATA_HOME/rustup-musl" ]; then
-    [ -e /usr/lib/libgcc_s.so.1 ] || export LD_LIBRARY_PATH="$XDG_DATA_HOME/rustup-musl/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-    __available cc || PATH="$XDG_DATA_HOME/rustup-musl/bin:$PATH"
-    export "CARGO_TARGET_$(uname -m | tr '[:lower:]' '[:upper:]')_UNKNOWN_LINUX_MUSL_RUSTFLAGS=-C link-self-contained=no"
+  # see install_linux_support in packages/rustup.sh
+  if [ -d "$XDG_DATA_HOME/rustup-cc" ]; then
+    __available cc || PATH="$XDG_DATA_HOME/rustup-cc/bin:$PATH"
+    [ -e "/lib/ld-musl-$(uname -m).so.1" ] \
+      && export "CARGO_TARGET_$(uname -m | tr '[:lower:]' '[:upper:]')_UNKNOWN_LINUX_MUSL_RUSTFLAGS=-C link-self-contained=no"
+  fi
+  # musl toolchains need libgcc_s
+  if [ -d "$XDG_DATA_HOME/musl-libs" ] && [ ! -e /usr/lib/libgcc_s.so.1 ]; then
+    export LD_LIBRARY_PATH="$XDG_DATA_HOME/musl-libs/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
   fi
   # END RUST
 

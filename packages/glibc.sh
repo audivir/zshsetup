@@ -10,13 +10,13 @@ set -euo pipefail
 name="glibc"
 brew=""
 apt=""
-# the glibc loader, which prints the version with --version
-local_bin="$XDG_BIN_HOME/glibc"
 install_dir="$XDG_DATA_HOME/glibc"
+# the glibc loader, which prints the version with --version
+loader="$install_dir/loader"
 
 # checks the currently installed version, echoes "" if not installed
 check() {
-  2>/dev/null "$local_bin" --version | awk 'NR == 1 {sub(/\.$/, "", $NF); print $NF}' || echo ""
+  2>/dev/null "$loader" --version | awk 'NR == 1 {sub(/\.$/, "", $NF); print $NF}' || echo ""
 }
 
 # queries the newest sysroot build: "version basename"
@@ -54,12 +54,11 @@ install() {
   mv "$tmpdir"/pkg/*-conda-linux-gnu/sysroot "$install_dir"
   rm -rf "$tmpdir"
   trap - EXIT INT TERM
-  ln -sf "$(echo "$install_dir"/lib64/ld-linux-*.so.*)" "$local_bin"
+  ln -sf "$(echo "$install_dir"/lib64/ld-linux-*.so.*)" "$loader"
 }
 
 # uninstalls the installed package
 uninstall() {
-  rm "$local_bin"
   rm -rf "$install_dir"
 }
 

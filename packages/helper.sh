@@ -87,13 +87,18 @@ package_manager() {
   fi
 }
 
+# checks with the package's check() whether it is installed, for packages without a command
+__installed_package() {
+  ((${packages[(Ie)$1]})) && [ -n "$("$ZSHSETUP_HOME/packages/$1.sh" check 2>/dev/null)" ]
+}
+
 require_cmd() {
   local cmd
   for cmd in "$@"; do
-    if ! __available_cmd "$cmd"; then
+    if ! __available_cmd "$cmd" && ! __installed_package "$cmd"; then
       if ((${packages[(Ie)$cmd]})) \
         && "$ZSHSETUP_HOME/packages/$cmd.sh" package \
-        && __available_cmd "$cmd"; then
+        && { __available_cmd "$cmd" || __installed_package "$cmd"; }; then
         continue
       fi
       echo "Required command not found: $cmd (needed by ${name:-package})" >&2
@@ -165,8 +170,12 @@ with open(sys.argv[1], "rb") if len(sys.argv) > 1 else sys.stdin.buffer as f:
 
 # static on musl: zig misaligns environ when linking musl dynamically on aarch64
 zig_cc() {
+  local version
   if [ "$(__libc)" = "musl" ]; then
     echo "zig cc -target $(uname -m)-linux-musl"
+  elif [ "$(uname)" = "Linux" ] && version="$(__glibc_version)" && [ -n "$version" ]; then
+    # zig links against its newest glibc unless told the host's
+    echo "zig cc -target $(uname -m)-linux-gnu.$version"
   else
     echo "zig cc"
   fi
@@ -207,9 +216,25 @@ __libc() {
 }
 
 # on musl, linux_musl_os replaces os and linux_musl_arch the libc suffix of arch
+# echoes the glibc version, or "" if unknown
+__glibc_version() {
+  local version
+  version="$(getconf GNU_LIBC_VERSION 2>/dev/null | awk '{print $2}')" || true
+  [ -n "$version" ] || version="$(ldd --version 2>&1 | awk 'NR == 1 {print $NF}')" || true
+  echo "$version"
+}
+
+# checks that glibc is at least version $1 (or unknown)
+__glibc_at_least() {
+  local version
+  version="$(__glibc_version)"
+  autoload -Uz is-at-least
+  [ -z "$version" ] || is-at-least "$1" "$version"
+}
+
 set_os_arch() {
   local linux_amd_os linux_amd_arch linux_arm_os linux_arm_arch macos_arm_os macos_arm_arch
-  local linux_musl_os linux_musl_arch
+  local linux_musl_os linux_musl_arch min_glibc
   linux_amd_os="$1"
   linux_amd_arch="$2"
   linux_arm_os="$3"
@@ -218,6 +243,7 @@ set_os_arch() {
   macos_arm_arch="$6"
   linux_musl_os="${7:-}"
   linux_musl_arch="${8:-}"
+  min_glibc="${9:-}"
   os="$(uname)"
   arch="$(uname -m)"
   if [ "$os" = "Linux" ]; then
@@ -231,7 +257,8 @@ set_os_arch() {
       echo "Unsupported architecture: $arch" >&2
       return 1
     fi
-    if [ "$(__libc)" = "musl" ]; then
+    # the musl build also serves glibc hosts too old for the gnu build
+    if [ "$(__libc)" = "musl" ] || { [ -n "$min_glibc" ] && ! __glibc_at_least "$min_glibc"; }; then
       [ -n "$linux_musl_os" ] && os="$linux_musl_os"
       [ -n "$linux_musl_arch" ] && arch="${arch%%-*}-$linux_musl_arch"
     fi
@@ -305,6 +332,9 @@ main() {
       ;;
     fetch)
       fetch
+      ;;
+    check)
+      check
       ;;
     *)
       echo "Unknown subcommand $cmd" >&2

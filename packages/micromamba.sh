@@ -49,7 +49,7 @@ install() {
   mv "$tmpfile" "$target"
   trap - EXIT INT TERM
   if [ "$target" != "$local_bin" ]; then
-    patchelf --set-interpreter "$(readlink "$XDG_BIN_HOME/glibc")" \
+    patchelf --set-interpreter "$(readlink "$XDG_DATA_HOME/glibc/loader")" \
       --add-rpath "$XDG_DATA_HOME/glibc/lib64:$XDG_DATA_HOME/glibc/usr/lib64" --force-rpath "$target"
     cp "$ZSHSETUP_HOME/packages/musl/micromamba" "$local_bin"
     chmod +x "$local_bin"

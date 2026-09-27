@@ -5,11 +5,12 @@ setup_zshsetup
 ln -s "$ZSHSETUP_HOME/.zshrc" "$HOME/.zshrc"
 export ZSHSETUP_CHOICE=manual ZSHSETUP_REQUIRE_ZIG=1 ZSHSETUP_REQUIRE_MAKE=1 ZSHSETUP_REQUIRE_PYTHON3=1 \
   ZSHSETUP_REQUIRE_ZSTD=1 ZSHSETUP_REQUIRE_MICROMAMBA=1
-is_linux && export ZSHSETUP_REQUIRE_GLIBC=1 ZSHSETUP_REQUIRE_PATCHELF=1
+is_linux && export ZSHSETUP_REQUIRE_PATCHELF=1
+is_musl && export ZSHSETUP_REQUIRE_GLIBC=1 ZSHSETUP_REQUIRE_MUSL_LIBS=1
 
 zsh -i -c 'echo ready' >/tmp/all-install.log 2>&1 || true
 check "no install failed" test ! -e "$ZSHSETUP_HOME/failed"
-[ -e "$ZSHSETUP_HOME/failed" ] && echo "  info  failed: $(ls "$ZSHSETUP_HOME/failed" | tr '\n' ' ')"
+[ -e "$ZSHSETUP_HOME/failed" ] && echo "  info  failed: $(cd "$ZSHSETUP_HOME/failed" && echo *)"
 
 run() {
   echo "  info  $1: $(zsh -i -c "whence -p ${2%% *}" 2>/dev/null)"
@@ -33,7 +34,8 @@ run micro "micro --version"
 run kv "kv --version"
 run zstd "zstd --version"
 if is_linux; then
-  run glibc "glibc --version"
+  is_musl && run glibc "\$XDG_DATA_HOME/glibc/loader --version"
+  is_musl && run musl-libs "test -e \$XDG_DATA_HOME/musl-libs/lib/libgcc_s.so.1"
   run patchelf "patchelf --version"
 fi
 

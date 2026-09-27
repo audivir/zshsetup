@@ -1,6 +1,6 @@
 #!/bin/sh
 # musl extras through a shell start: micromamba with a user-space glibc (create, activate, run,
-# completion), Rust with zig's libgcc_s and cc, bun with Alpine's libstdc++, and statically built make and gawk (slow)
+# completion), Rust with zig's libgcc_s and cc, bun with musl-libs, and statically built make and gawk (slow)
 . "${ZSHSETUP_TEST_REPO:-/zshsetup}/tests/lib.sh"
 is_musl || skip "musl only"
 setup_zshsetup
@@ -33,8 +33,8 @@ check "make runs" contains "$out" "make: GNU Make"
 check "gawk runs" contains "$out" "gawk: GNU Awk"
 check "bun runs" contains "$out" "bun: 2,4"
 if [ ! -e /usr/lib/libstdc++.so.6 ]; then
-  check "bun's libstdc++ comes from Alpine's packages" test -e "$XDG_DATA_HOME/bun-musl/lib/libstdc++.so.6"
+  check "bun's libstdc++ comes from musl-libs" test -e "$XDG_DATA_HOME/musl-libs/lib/libstdc++.so.6"
 fi
-check "uninstalling bun removes its libraries" sh -c "'$ZSHSETUP_HOME/packages/bun.sh' uninstall && test ! -e '$XDG_DATA_HOME/bun-musl'"
+check "uninstalling bun keeps musl-libs for Rust" sh -c "'$ZSHSETUP_HOME/packages/bun.sh' uninstall && test -e '$XDG_DATA_HOME/musl-libs/version'"
 
 finish
