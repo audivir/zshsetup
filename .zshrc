@@ -94,6 +94,11 @@ __init_zshsetup_env() {
     fi
   fi
 
+  # RHEL/CentOS 7-8
+  if [ -z "$SSL_CERT_FILE" ] && [ ! -e /etc/ssl/cert.pem ] && [ -e /etc/pki/tls/cert.pem ]; then
+    export SSL_CERT_FILE=/etc/pki/tls/cert.pem
+  fi
+
   # SETUP HISTORY
   HISTFILE="$ZSHSETUP_HOME/zsh_history"
   HISTSIZE=50000

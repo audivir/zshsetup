@@ -9,41 +9,28 @@ name="git"
 brew="git"
 apt="git"
 local_bin="$XDG_BIN_HOME/git"
-# git finds libexec/git-core relative to bin/, which macOS does not resolve through
-# symlinks, so the release tree is installed into the prefix of $XDG_BIN_HOME itself
 prefix="${XDG_BIN_HOME%/*}"
-release_repo="audivir/zshsetup"
 
 # checks the currently installed version, echoes "" if not installed
 check() {
-  2>/dev/null "$local_bin" --version | awk '{print $3}' || echo ""
+  2>/dev/null "$local_bin" --version | awk '{print "v"$3}' || echo ""
 }
 
 # fetches the latest version
-# static builds are published by .github/workflows/build-git.yml as releases tagged git-v<version>
 fetch() {
-  require_cmd jq || return 1
-  local version
-  version="$(curl_or_wget "https://api.github.com/repos/$release_repo/releases?per_page=100" \
-    | jq -r '[.[].tag_name | select(startswith("git-v"))][0] // empty | ltrimstr("git-v")')"
-  if [ -z "$version" ]; then
-    echo "No static git release found in $release_repo" >&2
-    return 1
-  fi
-  echo "$version"
+  get_latest_github "audivir/git-static"
 }
 
 # installs the most recent version
 install() {
   local version url tmpdir
   version="$1"
-  set_os_arch "linux" "x86_64" "linux" "aarch64" "macos" "aarch64"
-  url="https://github.com/$release_repo/releases/download/git-v$version/git-$version-$os-$arch.tar.gz"
+  set_os_arch "linux" "amd64" "linux" "arm64" "macos" "arm64" "linux-musl"
+  url="https://github.com/audivir/git-static/releases/download/$version/git-static-$os-$arch.tar.gz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
   curl_or_wget "$url" | tar -xzC "$tmpdir"
   mkdir -p "$prefix/bin" "$prefix/libexec" "$prefix/share"
-  # libexec/git-core holds relative symlinks to bin/git, so copy the trees as they are
   cp -R "$tmpdir/bin/." "$prefix/bin/"
   cp -R "$tmpdir/libexec/." "$prefix/libexec/"
   cp -R "$tmpdir/share/." "$prefix/share/"

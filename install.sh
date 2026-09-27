@@ -47,12 +47,33 @@ fi
 if ! __available zsh --help; then
   export PATH="$PATH:$HOME/.local/bin"
   if ! __available zsh --help; then
-    __download https://raw.githubusercontent.com/romkatv/zsh-bin/master/install \
-      | sh -s -- -d "$HOME/.local" -e "no" || exit 1
+    zsh_install="https://raw.githubusercontent.com/romkatv/zsh-bin/master/install"
+    if __available curl --help || __available wget --help; then
+      __download "$zsh_install" | sh -s -- -d "$HOME/.local" -e "no" || exit 1
+    else
+      zsh_tmp="$(mktemp -d)"
+      zsh_platform="$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)"
+      if ! __download "https://github.com/romkatv/zsh-bin/releases/download/v6.1.1/zsh-5.8-$zsh_platform.tar.gz" >"$zsh_tmp/zsh.tar.gz" \
+        || ! __download "$zsh_install" >"$zsh_tmp/install" \
+        || ! sh "$zsh_tmp/install" -d "$HOME/.local" -e "no" -f "$zsh_tmp/zsh.tar.gz"; then
+        rm -rf "$zsh_tmp"
+        exit 1
+      fi
+      rm -rf "$zsh_tmp"
+    fi
   fi
 fi
 
-# without git, installs it with the package script from a snapshot of the repo
+# for tests/docker_smoke_test.sh
+if [ -n "${ZSHSETUP_ZSH_ONLY:-}" ]; then
+  exit 0
+fi
+
+# RHEL/CentOS 7-8
+if [ -z "${SSL_CERT_FILE:-}" ] && [ ! -e /etc/ssl/cert.pem ] && [ -e /etc/pki/tls/cert.pem ]; then
+  export SSL_CERT_FILE=/etc/pki/tls/cert.pem
+fi
+
 if ! __available git --version; then
   snapshot="$(mktemp -d)"
   mkdir -p "$HOME/.local/bin" "$HOME/.local/share"

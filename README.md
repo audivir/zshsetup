@@ -10,7 +10,7 @@ tools are installed on shell start, either with Homebrew, APT, or a manual insta
 
 - macOS on arm64, or Linux (glibc, or musl like Alpine) on x86_64 or arm64
 - `curl` (or `wget`, `python3`, or `/usr/lib/apt/apt-helper` on Debian/Ubuntu), `tar`, and CA certificates
-  (`git` is installed as a static binary if missing)
+  (`git` is installed from prebuilt binaries if missing)
 - `zsh` (installed to `~/.local` with [zsh-bin](https://github.com/romkatv/zsh-bin) if missing)
 
 On minimal environments lacking `sudo`, `curl`, and `wget`, `zshsetup` falls back to system `python3` or `/usr/lib/apt/apt-helper` to automatically bootstrap a static `curl` binary into `~/.local/bin`.

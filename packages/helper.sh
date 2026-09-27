@@ -119,10 +119,9 @@ get_latest_crate() {
   curl_or_wget "https://crates.io/api/v1/crates/$crate" | jq -r .crate.max_stable_version
 }
 
-# echoes the C library of the host: "musl" (e.g. Alpine), "gnu" (glibc), or "" (not Linux)
+# echoes musl, gnu, or nothing if not Linux
 __libc() {
   [ "$(uname)" = "Linux" ] || return 0
-  # the musl loader is always there, ldd (whose musl banner exits non-zero) may be missing
   if [ -e /lib/ld-musl-x86_64.so.1 ] || [ -e /lib/ld-musl-aarch64.so.1 ]; then
     echo "musl"
     return 0
@@ -133,9 +132,7 @@ __libc() {
   esac
 }
 
-# sets $os and $arch to the download naming of the host
-# linux_musl_os replaces the Linux os on musl hosts, linux_musl_arch replaces the libc
-# suffix of the Linux arch (x86_64-glibc -> x86_64-musl); empty keeps the value
+# on musl, linux_musl_os replaces os and linux_musl_arch the libc suffix of arch
 set_os_arch() {
   local linux_amd_os linux_amd_arch linux_arm_os linux_arm_arch macos_arm_os macos_arm_arch
   local linux_musl_os linux_musl_arch
