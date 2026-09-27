@@ -67,10 +67,11 @@ which is installed first if missing:
 - `glibc`: User-space glibc for musl hosts, from conda-forge's sysroot (requires `jq`, `python3`, `zstd`)
 - `go`: The Go programming language toolchain
 - `jq`: Command-line JSON processor
-- `kv`: Key-value storage CLI (requires `jq`)
+- `kv`: Key-value storage CLI (requires `jq`, and `musl`, `patchelf` on older glibc)
 - `make`: GNU Make build automation tool (requires `zig`)
 - `micro`: Modern terminal-based text editor (requires `jq`)
 - `micromamba`: Fast standalone conda package manager (requires `jq`, and `glibc`, `patchelf` on musl)
+- `musl`: User-space musl for glibc hosts, from Alpine's package
 - `musl-libs`: GCC's `libstdc++` and `libgcc_s` for musl, from Alpine's packages (requires `patchelf`)
 - `oh-my-zsh`: Community-driven zsh configuration framework (requires `git`, `zsh`)
 - `patchelf`: Modifies the loader and RPATH of ELF binaries (Linux only)
@@ -94,7 +95,9 @@ which is installed first if missing:
   the `musl-libs` package takes them from Alpine's packages (with `packages/musl/apk-extract`,
   without `apk` or root). `bun` finds them through its RUNPATH, Rust through `LD_LIBRARY_PATH`.
 - Old glibc (CentOS 7, RHEL 8): `uv` (glibc 2.28) and `bat` (2.18) use their static musl builds
-  where the system cannot run the gnu builds, and zig builds for the system's glibc.
+  where the system cannot run the gnu builds, and zig builds for the system's glibc. `kv` (2.39 and
+  `libmvec`) uses its dynamic musl build, as it loads pdfium at runtime, with the `musl` package's
+  loader set by `patchelf`.
 - Without `curl`: the static `curl` is bootstrapped with `wget`, `python3`, or `apt-helper`
   (bare Debian/Ubuntu, without TLS verification) and checked against pinned SHA-256 hashes.
   Its musl build is used on all Linux, as the glibc one crashes on older glibc (CentOS 7).
