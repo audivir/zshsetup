@@ -23,3 +23,5 @@ zsh_history
 versions/
 preinit.zsh
 postinit.zsh
+failed/
+/bin/

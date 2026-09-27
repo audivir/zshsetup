@@ -1,0 +1,41 @@
+name: Weekly
+# musl (micromamba, Rust) and all (every package, on macOS without Homebrew) take long, so they run weekly
+on:
+  schedule:
+    - cron: "0 5 * * 1" # Monday 05:00 UTC
+  workflow_dispatch:
+jobs:
+  musl:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+      - run: ./tests/run_tests.sh -i alpine:3.22 musl
+        env:
+          ZSHSETUP_GH_TOKEN: ${{ github.token }}
+  all:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+        image: ['alpine:3.22', 'debian:stable-slim', 'ubuntu:24.04', 'centos:7', 'rockylinux:8']
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+      - run: ./tests/run_tests.sh -i ${{ matrix.image }} all
+        env:
+          ZSHSETUP_GH_TOKEN: ${{ github.token }}
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Remove Homebrew
+        run: sudo rm -rf /opt/homebrew /usr/local/Homebrew
+      - run: |
+          env -i HOME="$HOME" USER="$USER" TERM=dumb PATH=/usr/bin:/bin:/usr/sbin:/sbin \
+            ZSHSETUP_GH_TOKEN="$ZSHSETUP_GH_TOKEN" ./tests/run_tests.sh --native all
+        env:
+          ZSHSETUP_GH_TOKEN: ${{ github.token }}

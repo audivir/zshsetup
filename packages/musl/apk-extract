@@ -1,0 +1,32 @@
+#!/bin/sh
+# Usage: apk-extract DEST PACKAGE...
+#        apk-extract --version PACKAGE...
+#
+# Downloads packages from Alpine's main repository (of this Alpine release, else latest-stable)
+# and extracts their files into DEST, without apk or root, or prints their versions.
+# Dependencies are not resolved.
+set -eu
+
+dest="$1"
+shift
+release="latest-stable"
+[ -f /etc/alpine-release ] && release="v$(cut -d. -f1,2 /etc/alpine-release)"
+repo="https://dl-cdn.alpinelinux.org/alpine/$release/main/$(uname -m)"
+
+index="$(mktemp)"
+trap 'rm -f "$index"' EXIT INT TERM
+curl -fsSL "$repo/APKINDEX.tar.gz" | tar -xzO APKINDEX >"$index"
+[ "$dest" = "--version" ] || mkdir -p "$dest"
+for pkg do
+  version="$(awk -v pkg="$pkg" '/^P:/ { found = ($0 == "P:" pkg) } found && /^V:/ { print substr($0, 3); exit }' "$index")"
+  if [ -z "$version" ]; then
+    echo "apk-extract: $pkg not found in $repo" >&2
+    exit 1
+  fi
+  if [ "$dest" = "--version" ]; then
+    echo "$version"
+    continue
+  fi
+  curl -fsSL "$repo/$pkg-$version.apk" | tar -xzf - -C "$dest" 2>/dev/null
+done
+[ "$dest" = "--version" ] || rm -f "$dest"/.PKGINFO "$dest"/.SIGN.* "$dest"/.pre-* "$dest"/.post-* "$dest"/.trigger

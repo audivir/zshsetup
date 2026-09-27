@@ -6,58 +6,51 @@ set -euo pipefail
 . "$ZSHSETUP_HOME/packages/helper.sh"
 
 name="gawk"
+brew="gawk"
+apt="gawk"
 local_bin="$XDG_BIN_HOME/gawk"
 
-# check the currently installed version, echo "" if not installed
+# checks the currently installed version, echoes "" if not installed
 check() {
   2>/dev/null "$local_bin" --version | awk 'NR == 1 { sub(",", "", $3); print $3 }' || echo ""
 }
 
-# fetch the latest version
+# fetches the latest version
 fetch() {
-  curl --fail-with-body -sL "https://ftp.gnu.org/gnu/gawk/" \
+  curl -fsSL "https://ftp.gnu.org/gnu/gawk/" \
     | grep -o 'gawk-[0-9.]*\.tar\.xz"' \
     | sed 's/^gawk-//; s/\.tar\.xz"$//' \
     | sort -t. -k1,1n -k2,2n -k3,3n \
     | tail -n 1
 }
 
-# install the most recent version
+# installs the most recent version
 # GNU only ships sources, so build them with the system compiler or zig
 install() {
+  require_cmd make zig python3 || return 1
   local version url tmpdir cc
   version="$1"
-  if ! 2>/dev/null >/dev/null make --version; then
-    echo "make is required to build $name" >&2
-    return 1
-  fi
-  if 2>/dev/null >/dev/null cc --version; then
-    cc="cc"
-  elif 2>/dev/null >/dev/null zig version; then
-    cc="zig cc"
-  else
-    echo "cc or zig is required to build $name" >&2
-    return 1
-  fi
+  cc="$(zig_cc)"
   url="https://ftp.gnu.org/gnu/gawk/gawk-$version.tar.xz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
-  curl --fail-with-body -L "$url" | tar -x -J -C "$tmpdir"
+  curl -fsSL "$url" -o "$tmpdir/gawk.tar.xz"
+  python3 -m tarfile --filter data -e "$tmpdir/gawk.tar.xz" "$tmpdir"
   (
     cd "$tmpdir/gawk-$version"
     # zig cannot link the loadable extensions as macOS bundles
-    CC="$cc" ./configure --disable-nls --disable-pma --disable-extensions \
+    ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="$cc -w" LD="$cc" ./configure --disable-nls --disable-dependency-tracking --disable-pma --disable-extensions \
       --without-readline --without-mpfr >/dev/null
-    make -j4 >/dev/null
+    make -j4 ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="$cc -w" LD="$cc" >/dev/null
   )
   mv "$tmpdir/gawk-$version/gawk" "$local_bin"
   rm -rf "$tmpdir"
   trap - EXIT INT TERM
 }
 
-# uninstall the installed package
+# uninstalls the installed package
 uninstall() {
   rm "$local_bin"
 }
 
-main "$name" "$@"
+main "$name" "$brew" "$apt" "$@"

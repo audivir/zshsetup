@@ -6,33 +6,37 @@ set -euo pipefail
 . "$ZSHSETUP_HOME/packages/helper.sh"
 
 name="zig"
+brew="zig"
+apt=""
 local_bin="$XDG_BIN_HOME/zig"
 install_dir="$XDG_DATA_HOME/zig"
 index_url="https://ziglang.org/download/index.json"
 
-# check the currently installed version, echo "" if not installed
+# checks the currently installed version, echoes "" if not installed
 check() {
   2>/dev/null "$local_bin" version || echo ""
 }
 
-# fetch the latest version
+# fetches the latest version
 # jq may not be installed yet, and the index lists the newest release first
 fetch() {
-  curl --fail-with-body -sL "$index_url" \
+  curl -fsSL "$index_url" \
     | grep -o 'https://ziglang.org/download/[0-9.]*/' \
-    | head -n 1 \
-    | awk -F/ '{print $5}'
+    | awk -F/ 'NR == 1 {print $5}'
 }
 
-# install the most recent version
+# installs the most recent version
 install() {
+  require_cmd python3 || return 1
   local version url tmpdir
   version="$1"
-  set_os_arch "linux" "x86_64" "linux" "aarch64" "macos" "x86_64" "macos" "aarch64"
+  set_os_arch "linux" "x86_64" "linux" "aarch64" "macos" "aarch64"
   url="https://ziglang.org/download/$version/zig-$arch-$os-$version.tar.xz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
-  curl --fail-with-body -L "$url" | tar -x -J -C "$tmpdir"
+  curl -fsSL "$url" -o "$tmpdir/zig.tar.xz"
+  python3 -m tarfile --filter data -e "$tmpdir/zig.tar.xz" "$tmpdir"
+  rm -rf "$install_dir"
   mv "$tmpdir/zig-$arch-$os-$version" "$install_dir"
   rm -rf "$tmpdir"
   trap - EXIT INT TERM
@@ -40,10 +44,10 @@ install() {
   ln -sf "$install_dir/zig" "$local_bin"
 }
 
-# uninstall the installed package
+# uninstalls the installed package
 uninstall() {
   rm "$local_bin"
   rm -r "$install_dir"
 }
 
-main "$name" "$@"
+main "$name" "$brew" "$apt" "$@"
