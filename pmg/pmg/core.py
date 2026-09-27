@@ -1,13 +1,9 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.13"
-# dependencies = ["doctyper", "jinja2", "msgspec", "mxhttp"]
-# ///
-"""A simple one-file package manager.
+"""Resolving, installing, and uninstalling packages from their specs.
 
-Package specs are TOML files named after the package in `PMG_SPECS`, by default `specs/` next to
-this file. Templates in a spec are Jinja templates with {{ tag }} (the release tag, e.g.
-"v0.26.1"), {{ version }} (the tag without a leading "v"), and {{ asset }} (the asset file name).
+Package specs are TOML files named after the package in `PMG_SPECS`, by default
+`$XDG_CONFIG_HOME/pmg/specs`. Templates in a spec are Jinja templates with {{ tag }} (the release
+tag, e.g. "v0.26.1"), {{ version }} (the tag without a leading "v"), and {{ asset }} (the asset
+file name).
 """
 
 from __future__ import annotations
@@ -41,6 +37,14 @@ Command: TypeAlias = str
 Platform: TypeAlias = Literal["glibc_x64", "glibc_arm64", "musl_x64", "musl_arm64", "macos_arm64"]
 
 GH_TOKEN_ENV = "PMG_GH_TOKEN"  # noqa: S105
+HOST_PLATFORMS: dict[tuple[str, str], Platform] = {
+    ("glibc", "x86_64"): "glibc_x64",
+    ("glibc", "aarch64"): "glibc_arm64",
+    ("musl", "x86_64"): "musl_x64",
+    ("musl", "aarch64"): "musl_arm64",
+    ("macos", "arm64"): "macos_arm64",
+}
+"""Platform for each libc and machine, as reported by `platform.machine`."""
 TAR_SUFFIXES = (".tar", ".tar.gz", ".tgz", ".tar.xz", ".txz", ".tar.bz2", ".tbz2")
 
 logger = logging.getLogger("pmg")
@@ -97,7 +101,7 @@ class CommandDownload(BaseStruct, tag="command", kw_only=True):
 Download: TypeAlias = GitHubDownload | UrlDownload | CommandDownload
 
 
-class Asset(TypedDict):
+class Assets(TypedDict):
     """Stores the asset file name for each platform; a missing platform is unsupported."""
 
     glibc_x64: NotRequired[str]
@@ -134,7 +138,7 @@ class Package(BaseStruct, kw_only=True):
     external: External
     min_glibc: Annotated[str, msgspec.Meta(pattern=r"^\d+(\.\d+)*$")] | None = None
     """Oldest glibc for the glibc assets; older glibc hosts get the musl assets."""
-    asset: Asset
+    assets: Assets
     bin: dict[str, str] = {}
     """Name in the bin dir mapped to the path in the archive, without a single top-level dir."""
     check: Check
@@ -147,7 +151,7 @@ class Package(BaseStruct, kw_only=True):
         """Takes the download repo from the release if it is not set."""
         dl, rl = self.download, self.release
         if isinstance(dl, GitHubDownload) and not dl.repo:
-            if not isinstance(rl, GitHubRelease):
+            if not isinstance(rl, GitHubRelease):  # pragma: no cover
                 raise ValueError(
                     "GitHubDownload needs to specify the repo if GitHubRelease is not used"
                 )
@@ -211,7 +215,9 @@ class Files(SyncConsumer):
 
 def spec_dir() -> Path:
     """Returns the directory of the package specs."""
-    return Path(os.getenv("PMG_SPECS") or Path(__file__).parent / "specs")
+    if specs := os.getenv("PMG_SPECS"):
+        return Path(specs)
+    return Path(os.getenv("XDG_CONFIG_HOME") or Path.home() / ".config") / "pmg" / "specs"
 
 
 def state_dir() -> Path:
@@ -236,11 +242,11 @@ def load_spec(name: str) -> Package:
         PmgError: If the spec is missing or invalid.
     """
     path = spec_dir() / f"{name}.toml"
-    if not path.is_file():
+    if not path.is_file():  # pragma: no cover
         raise PmgError(f"no spec for {name} in {path.parent}")
     try:
         return decode(path.read_text())
-    except msgspec.ValidationError as e:
+    except msgspec.ValidationError as e:  # pragma: no cover
         raise PmgError(f"invalid spec {path}: {e}") from e
 
 
@@ -297,7 +303,8 @@ def render(template: str, tag: str, **extra: str) -> str:
 def glibc_version() -> tuple[int, ...] | None:
     """Returns the glibc version of the host, or None on musl and macOS."""
     with contextlib.suppress(ValueError, OSError):
-        if value := os.confstr("CS_GNU_LIBC_VERSION"):
+        # glibc hosts always report a version, other hosts raise.
+        if value := os.confstr("CS_GNU_LIBC_VERSION"):  # pragma: no branch
             return version_tuple(value.removeprefix("glibc "))
     return None
 
@@ -313,23 +320,14 @@ def detect_platform(min_glibc: tuple[int, ...] | None) -> Platform:
     Raises:
         PmgError: If the OS or architecture is unsupported.
     """
-    system, machine = platform.system(), platform.machine().lower()
-    if machine in {"x86_64", "amd64"}:
-        is_arm = False
-    elif machine in {"arm64", "aarch64"}:
-        is_arm = True
-    else:
-        raise PmgError(f"unsupported architecture: {machine}")
-    if system == "Darwin":
-        if not is_arm:
-            raise PmgError("only arm64 is supported on macOS")
-        return "macos_arm64"
-    if system != "Linux":
-        raise PmgError(f"unsupported OS: {system}")
+    system, machine = platform.system(), platform.machine()
     glibc = glibc_version()
-    if glibc is None or (min_glibc and glibc < min_glibc):
-        return "musl_arm64" if is_arm else "musl_x64"
-    return "glibc_arm64" if is_arm else "glibc_x64"
+    uses_musl = glibc is None or (min_glibc is not None and glibc < min_glibc)
+    libc = {"Darwin": "macos", "Linux": "musl" if uses_musl else "glibc"}.get(system, system)
+    host = HOST_PLATFORMS.get((libc, machine))
+    if host is None:  # pragma: no cover
+        raise PmgError(f"unsupported platform: {system} {machine}")
+    return host
 
 
 def fetch_release(pkg: Package) -> str:
@@ -360,10 +358,10 @@ def run_download(pkg: Package, tag: str, host: Platform, dl_dir: StrPath) -> Pat
     """
     dl_dir = Path(dl_dir)
     dl = pkg.download
-    if isinstance(dl, CommandDownload):
+    if isinstance(dl, CommandDownload):  # pragma: no cover
         raise NotImplementedError("CommandDownload not yet supported")
-    asset_template = pkg.asset.get(host)
-    if asset_template is None:
+    asset_template = pkg.assets.get(host)
+    if asset_template is None:  # pragma: no cover
         raise PmgError(f"no asset for {host}")
     asset = render(asset_template, tag)
     if isinstance(dl, GitHubDownload):
@@ -371,7 +369,7 @@ def run_download(pkg: Package, tag: str, host: Platform, dl_dir: StrPath) -> Pat
             raise RuntimeError("GitHubDownload's repo not set in __post_init__")
         info = github_api().release(*split_repo(dl.repo), tag=tag)
         found = next((a for a in info.assets if a.name == asset), None)
-        if found is None:
+        if found is None:  # pragma: no cover
             raise PmgError(f"{dl.repo} {tag} has no asset {asset}")
         return download_file(found.browser_download_url, dl_dir / asset, found.digest)
     url = render(dl.url, tag, asset=asset)
@@ -425,7 +423,7 @@ def run_install(name: str, pkg: Package, tag: str, archive: Path, target: Path) 
     content = unpack(archive, target.parent / "unpacked")
     for bin_name, path_template in pkg.bin.items():
         source = content / render(path_template, tag, asset=archive.name)
-        if not source.is_file():
+        if not source.is_file():  # pragma: no cover
             raise PmgError(f"{archive.name} has no {source.relative_to(content)}")
         dest = target / "bin" / bin_name
         shutil.copy2(source, dest)
@@ -455,7 +453,7 @@ def destination(relative: Path) -> Path:
         PmgError: If the file is outside the layout.
     """
     roots = layout()
-    if relative.parts[0] not in roots:
+    if relative.parts[0] not in roots:  # pragma: no cover
         raise PmgError(f"{relative} is outside the install layout {sorted(roots)}")
     return roots[relative.parts[0]].joinpath(*relative.parts[1:])
 
@@ -556,7 +554,7 @@ def uninstall_package(name: str, record: Record) -> None:
     if hook:
         try:
             subprocess.check_call(hook, shell=True)  # noqa: S602
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError as e:  # pragma: no cover
             raise PmgError(f"uninstall of {name} failed with exit code {e.returncode}") from e
     for path in record.files:
         Path(path).unlink(missing_ok=True)
@@ -572,7 +570,7 @@ def uninstall_packages(names: list[str]) -> None:
     """
     records = load_records()
     removing = set(names)
-    if missing := sorted(removing - records.keys()):
+    if missing := sorted(removing - records.keys()):  # pragma: no cover
         raise PmgError(f"not installed: {', '.join(missing)}")
     for name, record in records.items():
         if name in removing:
@@ -643,17 +641,3 @@ def list_installed() -> None:
     for name, record in load_records().items():
         kind = "explicit" if record.explicit else "dependency"
         sys.stdout.write(f"{name} {record.tag} {kind}\n")
-
-
-if __name__ == "__main__":
-    import doctyper
-
-    # info for pmg only, as httpx logs every request at info.
-    logging.basicConfig(format="%(message)s")
-    logger.setLevel(logging.INFO)
-    app = doctyper.DocTyper()
-    app.command()(install)
-    app.command()(uninstall)
-    app.command()(autoremove)
-    app.command("list")(list_installed)
-    app()

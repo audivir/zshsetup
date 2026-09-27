@@ -13,7 +13,7 @@ repo = "sharkdp/bat"
 [download]
 type = "github"
 
-[asset]
+[assets]
 glibc_x64 = "bat-{{ tag }}-x86_64-unknown-linux-gnu.tar.gz"
 glibc_arm64 = "bat-{{ tag }}-aarch64-unknown-linux-gnu.tar.gz"
 musl_x64 = "bat-{{ tag }}-x86_64-unknown-linux-musl.tar.gz"
