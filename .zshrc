@@ -272,10 +272,11 @@ update_zshsetup() {
     __install_zshsetup
     return "$?"
   fi
-  pushd "$ZSHSETUP_HOME" || return 1
-  git fetch || __eprint "Failed to fetch new data from $ZSHSETUP_REPO"
-  git merge || __eprint "Failed to merge updates"
-  popd || true
+  (
+    cd "$ZSHSETUP_HOME" || exit 1
+    git fetch || __eprint "Failed to fetch new data from $ZSHSETUP_REPO"
+    git merge || __eprint "Failed to merge updates"
+  )
 
   local packages
   packages=(zig make gawk jq micromamba go rustup uv uvc bun bat micro kv)
@@ -356,13 +357,13 @@ fi
 # INITIALIZE DIRECTORIES/OMZ/PACKAGES
 __init_zshsetup || return 1
 
-# CLEANUP
-unfunction __assure_link __assure_dir __package_manager __source __available
-unfunction __init_cache __init_zshsetup_env __init_zshsetup __install_zshsetup
-
 # SOURCE POST-INIT
 if [ ! -f "$ZSHSETUP_HOME/postinit.zsh" ]; then
   printf '#!/usr/bin/env zsh\n# shellcheck shell=bash\n' >"$ZSHSETUP_HOME/postinit.zsh" || return 1
   chmod +x "$ZSHSETUP_HOME/postinit.zsh" || return 1
 fi
 . "$ZSHSETUP_HOME/postinit.zsh" || return 1
+
+# CLEANUP
+unfunction __assure_link __assure_dir __package_manager __source __available
+unfunction __init_cache __init_zshsetup_env __init_zshsetup __install_zshsetup
