@@ -42,11 +42,15 @@ __package_manager() {
 }
 
 # installs a missing tool, warns instead of aborting and skips a failed install for a day
+# ZSHSETUP_DISABLE_<PACKAGE> skips the install, but a package installed anyway (e.g. as a dependency) is used
+# shellcheck disable=SC2296,SC2299
 __require() {
-  local package marker
+  local package marker disable_var
   package="$1"
   marker="$ZSHSETUP_HOME/failed/$package"
+  disable_var="ZSHSETUP_DISABLE_${${package:u}//-/_}"
   __available "$package" && return 0
+  [ -n "${(P)disable_var}" ] && return 1
   [ -n "$(find "$marker" -mtime -1 2>/dev/null)" ] && return 1
   if __package_manager "$package" && __available "$package"; then
     rm -f "$marker"
@@ -181,7 +185,7 @@ __init_zshsetup() {
   #
   # BEGIN MICROMAMBA
   # micromamba and conda-forge packages need glibc, see packages/musl/micromamba
-  if { [ -n "$ZSHSETUP_REQUIRE_MICROMAMBA_ON_MUSL" ] || { [ ! -e /lib/ld-musl-x86_64.so.1 ] && [ ! -e /lib/ld-musl-aarch64.so.1 ]; }; } \
+  if { [ -n "$ZSHSETUP_REQUIRE_MICROMAMBA" ] || { [ ! -e /lib/ld-musl-x86_64.so.1 ] && [ ! -e /lib/ld-musl-aarch64.so.1 ]; }; } \
     && __require micromamba; then
     alias conda='micromamba'
     export MAMBA_ROOT_PREFIX="$XDG_DATA_HOME/micromamba"
@@ -218,9 +222,17 @@ __init_zshsetup() {
   fi
   # END RUST
 
-  # BEGIN ZIG
-  [ -n "$ZSHSETUP_REQUIRE_ZIG" ] && __require zig
-  # END ZIG
+  # BEGIN REQUIRED PACKAGES
+  # non-default packages from ZSHSETUP_REQUIRE_<PACKAGE>, e.g. ZSHSETUP_REQUIRE_ZIG
+  local package required_var packages
+  . "$ZSHSETUP_HOME/packages/packages.sh"
+  for package in "${packages[@]}"; do
+    # shellcheck disable=SC2296,SC2299
+    required_var="ZSHSETUP_REQUIRE_${${package:u}//-/_}"
+    # shellcheck disable=SC2296
+    [ -n "${(P)required_var}" ] && __require "$package"
+  done
+  # END REQUIRED PACKAGES
 
   # BEGIN JAVASCRIPT
   export BUN_INSTALL="$XDG_DATA_HOME/bun"
@@ -265,8 +277,8 @@ __save_settings() {
     printf '#!/usr/bin/env zsh\n# shellcheck shell=bash\n' >"$preinit" || return 1
     chmod +x "$preinit" || return 1
   fi
-  for var in ZSHSETUP_CHOICE ${(k)parameters[(I)ZSHSETUP_CHOICE_*]} ZSHSETUP_IGNORESCRATCH ZSHSETUP_REQUIRE_ZIG \
-    ZSHSETUP_REQUIRE_MICROMAMBA_ON_MUSL ZSHSETUP_RUST_TOOLCHAIN; do
+  for var in ZSHSETUP_CHOICE ${(k)parameters[(I)ZSHSETUP_CHOICE_*]} ${(k)parameters[(I)ZSHSETUP_REQUIRE_*]} \
+    ${(k)parameters[(I)ZSHSETUP_DISABLE_*]} ZSHSETUP_IGNORESCRATCH ZSHSETUP_RUST_TOOLCHAIN; do
     if [ -n "${(P)var}" ]; then
       echo "export $var=${(q)${(P)var}}" >>"$preinit" || return 1
     fi

@@ -51,6 +51,11 @@ python3 <(curl --fail-with-body -L https://gist.githubusercontent.com/muendeleza
 
 ## Packages
 
+Installed by default (besides `zsh` and `git` from the installer): `oh-my-zsh`, `curl`, `uv`,
+`uvc`, `jq`, `gawk`, `micromamba` (not on musl), `go`, `rustup`, `bun`, `bat`, `micro`, and `kv`.
+Add others with `ZSHSETUP_REQUIRE_<PACKAGE>`, or skip defaults with `ZSHSETUP_DISABLE_<PACKAGE>`;
+dependencies of installed packages are installed either way.
+
 The following packages have bootstrap scripts in `packages/`. All of them download with `curl`,
 which is installed first if missing:
 
@@ -78,7 +83,7 @@ which is installed first if missing:
 ## Platform Notes
 
 - musl (Alpine): `micromamba` is skipped, since it and all conda-forge packages need glibc.
-  With `ZSHSETUP_REQUIRE_MICROMAMBA_ON_MUSL`, it runs with conda-forge's glibc, and a wrapper
+  With `ZSHSETUP_REQUIRE_MICROMAMBA`, it runs with conda-forge's glibc, and a wrapper
   patches new environments with `patchelf`; it also handles `micromamba run` (with `-n`/`-p`).
 - musl: `make` and `gawk` are built statically, as zig misaligns `environ` when linking musl
   dynamically on aarch64.
@@ -99,9 +104,10 @@ them to `preinit.zsh` for later shells.
   overriding `ZSHSETUP_CHOICE`.
 - `ZSHSETUP_IGNORESCRATCH`: do not move the cache directory to `/scratch/$USER/.cache`.
   A `~/.cache/.zshsetup_do_not_use_scratch` file does the same.
-- `ZSHSETUP_REQUIRE_ZIG`: install zig even if no other package requires it (when set and non-empty).
-- `ZSHSETUP_REQUIRE_MICROMAMBA_ON_MUSL`: install micromamba on musl with a user-space glibc
-  (when set and non-empty).
+- `ZSHSETUP_REQUIRE_<PACKAGE>`: install a package that is not installed by default
+  (e.g. `ZSHSETUP_REQUIRE_ZIG=1`, or `ZSHSETUP_REQUIRE_MICROMAMBA=1` on musl with a user-space glibc).
+- `ZSHSETUP_DISABLE_<PACKAGE>`: do not install a default package (e.g. `ZSHSETUP_DISABLE_BUN=1`);
+  it is still installed when another package depends on it.
 - `ZSHSETUP_GH_TOKEN`: GitHub token for API requests, which are limited to 60 per hour without.
   It is not saved to `preinit.zsh`.
 - `ZSHSETUP_RUST_TOOLCHAIN`: default toolchain for a manual `rustup` install (`stable` if unset).
