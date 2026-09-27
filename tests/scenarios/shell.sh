@@ -2,8 +2,6 @@
 # full installation through .zshrc from the working tree: preinit, REQUIRE/DISABLE, failed installs, update
 . "${ZSHSETUP_TEST_REPO:-/zshsetup}/tests/lib.sh"
 setup_env
-# git (for oh-my-zsh) verifies with the system's certificates, unlike the bootstrapped curl
-install_ca_certificates
 export ZSHSETUP_CHOICE=manual
 
 # a git repo of the working tree to install from, with micro failing on purpose
@@ -38,10 +36,15 @@ check "a failed install warns" grep -q "installing micro failed" /tmp/install-zs
 # a new shell reads preinit.zsh, skips the failed package, and sets up the tools
 clean_env="HOME=$HOME USER=$USER PATH=/usr/bin:/bin:$XDG_BIN_HOME TERM=dumb ZSHSETUP_GH_TOKEN=${ZSHSETUP_GH_TOKEN:-}"
 # shellcheck disable=SC2016,SC2086
-out="$(env -i $clean_env zsh -i -c 'echo "path1=$path[1]"; whence -w uvc' 2>&1)"
+out="$(env -i $clean_env zsh -i -c 'echo "path1=$path[1]"; whence -w uvc; echo "capath=$GIT_SSL_CAPATH"' 2>&1)"
 check "the next shell does not retry the failed install" lacks "$out" "Install micro via"
 check "zshsetup's bin comes first on PATH" contains "$out" "path1=$home/bin"
 check "uvc's shell function is loaded" contains "$out" "uvc: function"
+if [ ! -e /etc/ssl/cert.pem ] && [ -z "$(ls -A /etc/ssl/certs 2>/dev/null)" ]; then
+  check "git uses its bundled certificates without system ones" contains "$out" "capath=$HOME/.local/share/git-core/certs"
+else
+  check "git uses the system certificates" contains "$out" "capath=\$"
+fi
 check "the next shell does not reinstall disabled bun" lacks "$out" "Install bun via"
 
 # shellcheck disable=SC2086

@@ -10,7 +10,7 @@ tools are installed on shell start, either with Homebrew, APT, or a manual insta
 
 - macOS on arm64, or Linux (glibc, or musl like Alpine) on x86_64 or arm64
 - `curl` (or `wget`, `python3`, or `/usr/lib/apt/apt-helper` on Debian/Ubuntu), `tar`, and CA certificates
-  (`git` is installed from prebuilt binaries if missing)
+  for them (`git` is installed from prebuilt binaries if missing)
 - `zsh` (installed to `~/.local` with [zsh-bin](https://github.com/romkatv/zsh-bin) if missing)
 
 On minimal environments lacking `sudo`, `curl`, and `wget`, `zshsetup` falls back to system `python3` or `/usr/lib/apt/apt-helper` to automatically bootstrap a static `curl` binary into `~/.local/bin`.
@@ -92,6 +92,8 @@ which is installed first if missing:
 - Without `curl`: the static `curl` is bootstrapped with `wget`, `python3`, or `apt-helper`
   (bare Debian/Ubuntu, without TLS verification) and checked against pinned SHA-256 hashes.
   Its musl build is used on all Linux, as the glibc one crashes on older glibc (CentOS 7).
+- Without system CA certificates, `GIT_SSL_CAPATH` points `git` at the Mozilla certificates
+  bundled with [git-static](https://github.com/audivir/git-static).
 - A failed install is skipped for a day (see `failed/`); retry with `install_manual <package>`.
 
 ## Environment Variables

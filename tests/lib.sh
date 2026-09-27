@@ -42,16 +42,6 @@ lacks() {
   return 1
 }
 
-# installs CA certificates, a prerequisite that bare container images lack
-install_ca_certificates() {
-  [ -e /etc/ssl/certs/ca-certificates.crt ] || [ -e /etc/pki/tls/certs/ca-bundle.crt ] && return 0
-  if command -v apt-get >/dev/null 2>&1; then
-    apt-get -qq update >/dev/null && DEBIAN_FRONTEND=noninteractive apt-get -qq install -y ca-certificates >/dev/null
-  elif command -v apk >/dev/null 2>&1; then
-    apk add -q --no-cache ca-certificates >/dev/null
-  fi
-}
-
 is_musl() { [ -e /lib/ld-musl-x86_64.so.1 ] || [ -e /lib/ld-musl-aarch64.so.1 ]; }
 is_linux() { [ "$(uname)" = "Linux" ]; }
 has_apt() { command -v apt-get >/dev/null 2>&1; }

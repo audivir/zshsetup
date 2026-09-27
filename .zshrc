@@ -147,6 +147,10 @@ __init_zshsetup_env() {
   export GNUPGHOME="$XDG_DATA_HOME/gnupg"
   export MPLCONFIGDIR="$XDG_CONFIG_HOME/matplotlib"
   export PYTHON_HISTORY="$XDG_DATA_HOME/python/python_history"
+  # without system certificates, git-static uses its bundled ones
+  if [ ! -e /etc/ssl/cert.pem ] && [ -z "$(ls -A /etc/ssl/certs 2>/dev/null)" ]; then
+    export GIT_SSL_CAPATH="$LOCAL_HOME/share/git-core/certs"
+  fi
 }
 
 # runs the setup functions
