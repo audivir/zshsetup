@@ -70,6 +70,7 @@ The following packages have bootstrap scripts in `packages/`:
 - `uv`: Fast Python package and project manager (requires `jq`)
 - `uvc`: Python command wrapper and cache tool (requires `python3`)
 - `zig`: Zig compiler and toolchain (requires `python3`)
+- `zstd`: Zstandard compression tool (requires `make`, `zig`)
 
 ## Platform Notes
 
@@ -89,7 +90,7 @@ The following packages have bootstrap scripts in `packages/`:
 - `ZSHSETUP_CHOICE`: default package manager (`brew`, `apt`, or `manual`) instead of the menu.
 - `ZSHSETUP_IGNORESCRATCH`: do not move the cache directory to `/scratch/$USER/.cache`.
   A `~/.cache/.zshsetup_do_not_use_scratch` file does the same.
-- `ZSHSETUP_REQUIRE_ZIG`: install zig even if not required by gawk (when set and non-empty).
+- `ZSHSETUP_REQUIRE_ZIG`: install zig even if no other package requires it (when set and non-empty).
 - `ZSHSETUP_RUST_TOOLCHAIN`: default toolchain for a manual `rustup` install (`stable` if unset).
 
 ## License
