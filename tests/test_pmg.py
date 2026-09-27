@@ -1,206 +1,248 @@
-"""Tests for packages/pmg.py.
+"""Integration tests for packages/pmg.py, running it as a CLI against a local HTTP server.
 
 Run with:
-    uv run --no-project --with pytest --with jinja2 --with msgspec --with mxhttp \
+    uv run --no-project --with pytest --with doctyper --with jinja2 --with msgspec --with mxhttp \
         pytest tests/test_pmg.py
 
-Set PMG_OFFLINE=1 to skip the tests that download from GitHub.
+Set PMG_OFFLINE=1 to skip the test that installs bat from GitHub.
 """
 
 from __future__ import annotations
 
-import importlib.util
+import dataclasses
+import functools
+import http.server
+import io
+import json
 import os
+import subprocess
 import sys
+import tarfile
+import threading
+import zipfile
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, TypeAlias, override
 
-import jinja2
-import msgspec
 import pytest
-from mxhttp import ChecksumMismatchError
 
 if TYPE_CHECKING:
-    from types import ModuleType
+    from collections.abc import Iterator
+
+ArchiveFormat: TypeAlias = Literal["tar.gz", "zip", "bare"]
 
 PMG_PATH = Path(__file__).parents[1] / "packages" / "pmg.py"
+PLATFORMS = ("glibc_x64", "glibc_arm64", "musl_x64", "musl_arm64", "macos_arm64")
 
 
-def load_pmg() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("pmg", PMG_PATH)
-    if spec is None or spec.loader is None:
-        raise ImportError(PMG_PATH)
-    module = importlib.util.module_from_spec(spec)
-    # msgspec resolves the structs' annotations through sys.modules
-    sys.modules["pmg"] = module
-    spec.loader.exec_module(module)
-    return module
+class QuietHandler(http.server.SimpleHTTPRequestHandler):
+    @override
+    def log_message(self, format: str, *args: object) -> None:
+        pass
 
 
-pmg = load_pmg()
-
-online = pytest.mark.skipif(os.getenv("PMG_OFFLINE") == "1", reason="PMG_OFFLINE=1")
-
-STATIC_SPEC = """
-check = {{}}
-[external]
-[release]
-type = "static"
-tag = "v1.2.3"
-[download]
-{download}
-[asset]
-macos_arm64 = "tool-{{{{ version }}}}.tar.gz"
-"""
-
-
-def static_spec(download: str) -> str:
-    return STATIC_SPEC.format(download=download)
-
-
-def test_decode_bat() -> None:
-    bat = pmg.decode(pmg.bat_test)
-    assert bat.release == pmg.GitHubRelease(repo="sharkdp/bat")
-    assert bat.download.repo == "sharkdp/bat"
-    assert bat.external.brew == "bat"
-    assert bat.check.args == ["--version"]
-    assert bat.bin == {"bat": "bat"}
-    assert bat.min_glibc == "2.18"
-
-
-def test_missing_required_field() -> None:
-    with pytest.raises(msgspec.ValidationError, match="missing required field `check`"):
-        pmg.decode(pmg.bat_test.replace("check = {}\n", ""))
-
-
-def test_unknown_field() -> None:
-    with pytest.raises(msgspec.ValidationError, match="unknown field `min_glibcc`"):
-        pmg.decode(pmg.bat_test.replace("min_glibc", "min_glibcc"))
-
-
-def test_github_download_needs_repo_without_github_release() -> None:
-    with pytest.raises(msgspec.ValidationError, match="GitHubDownload needs to specify the repo"):
-        pmg.decode(static_spec('type = "github"'))
-
-
-def test_render() -> None:
-    rendered = pmg.render("{{ tag }} {{ version }} {{ asset }}", "v0.26.1", asset="a.tar.gz")
-    assert rendered == "v0.26.1 0.26.1 a.tar.gz"
-
-
-def test_render_undefined_variable() -> None:
-    with pytest.raises(jinja2.UndefinedError, match="'tagg' is undefined"):
-        pmg.render("bat-{{ tagg }}", "v1")
-
-
-@pytest.mark.parametrize(
-    ("system", "machine", "glibc", "min_glibc", "expected"),
-    [
-        ("Darwin", "arm64", None, "2.18", "macos_arm64"),
-        ("Linux", "x86_64", "2.39", "2.18", "glibc_x64"),
-        ("Linux", "aarch64", "2.39", None, "glibc_arm64"),
-        ("Linux", "aarch64", "2.17", "2.18", "musl_arm64"),
-        ("Linux", "x86_64", "2.17", None, "glibc_x64"),
-        ("Linux", "x86_64", None, None, "musl_x64"),
-    ],
-)
-def test_detect_platform(  # noqa: PLR0913, PLR0917
-    monkeypatch: pytest.MonkeyPatch,
-    system: str,
-    machine: str,
-    glibc: str | None,
-    min_glibc: str | None,
-    expected: str,
-) -> None:
-    monkeypatch.setattr(pmg.platform, "system", lambda: system)
-    monkeypatch.setattr(pmg.platform, "machine", lambda: machine)
-    monkeypatch.setattr(pmg, "glibc_version", lambda: glibc)
-    assert pmg.detect_platform(min_glibc) == expected
-
-
-@pytest.mark.parametrize(
-    ("system", "machine", "message"),
-    [
-        ("Darwin", "x86_64", "only arm64"),
-        ("Windows", "AMD64", "unsupported OS"),
-        ("Linux", "riscv64", "unsupported architecture"),
-    ],
-)
-def test_detect_platform_unsupported(
-    monkeypatch: pytest.MonkeyPatch, system: str, machine: str, message: str
-) -> None:
-    monkeypatch.setattr(pmg.platform, "system", lambda: system)
-    monkeypatch.setattr(pmg.platform, "machine", lambda: machine)
-    with pytest.raises(ValueError, match=message):
-        pmg.detect_platform(None)
-
-
-def test_fetch_release_static() -> None:
-    assert pmg.fetch_release(pmg.decode(static_spec('type = "url"\nurl = "x"'))) == "v1.2.3"
-
-
-def test_fetch_release_command() -> None:
-    spec = pmg.bat_test.replace(
-        'type = "github"\nrepo = "sharkdp/bat"', 'type = "command"\ncmd = "echo v9.9.9"', 1
+@pytest.fixture(scope="module")
+def server(tmp_path_factory: pytest.TempPathFactory) -> Iterator[tuple[str, Path]]:
+    root = tmp_path_factory.mktemp("assets")
+    httpd = http.server.ThreadingHTTPServer(
+        ("127.0.0.1", 0), functools.partial(QuietHandler, directory=root)
     )
-    spec = spec.replace(
-        '[download]\ntype = "github"', '[download]\ntype = "github"\nrepo = "sharkdp/bat"'
-    )
-    assert pmg.fetch_release(pmg.decode(spec)) == "v9.9.9"
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    yield f"http://127.0.0.1:{httpd.server_port}", root
+    httpd.shutdown()
 
 
-def test_run_download_without_asset_for_host(tmp_path: Path) -> None:
-    pkg = pmg.decode(static_spec('type = "url"\nurl = "https://example.com/{{ asset }}"'))
-    with pytest.raises(ValueError, match="no asset for glibc_x64"):
-        pmg.run_download(pkg, "v1.2.3", "glibc_x64", tmp_path)
+@dataclasses.dataclass
+class Env:
+    root: Path
+    base_url: str
+    assets: Path
+
+    @property
+    def home(self) -> Path:
+        return self.root / "home"
+
+    @property
+    def specs(self) -> Path:
+        return self.root / "specs"
+
+    @property
+    def bin(self) -> Path:
+        return self.home / ".local" / "bin"
+
+    def add_package(
+        self,
+        name: str,
+        deps: tuple[str, ...] = (),
+        archive_format: ArchiveFormat = "tar.gz",
+        post_install: str | None = None,
+    ) -> None:
+        script = f"#!/bin/sh\necho {name} 1.0\n".encode()
+        if archive_format == "tar.gz":
+            asset = f"{name}-1.0.tar.gz"
+            bin_path = "bin/" + name
+            with tarfile.open(self.assets / asset, "w:gz") as tar_file:
+                tar_info = tarfile.TarInfo(f"{name}-1.0/bin/{name}")
+                tar_info.size, tar_info.mode = len(script), 0o755
+                tar_file.addfile(tar_info, io.BytesIO(script))
+        elif archive_format == "zip":
+            asset = f"{name}-1.0.zip"
+            bin_path = name
+            with zipfile.ZipFile(self.assets / asset, "w") as zip_file:
+                zip_info = zipfile.ZipInfo(name)
+                zip_info.external_attr = 0o755 << 16
+                zip_file.writestr(zip_info, script)
+        else:
+            asset = f"{name}-1.0-linux"
+            bin_path = "{{ asset }}"
+            (self.assets / asset).write_bytes(script)
+        lines = [f"deps = {json.dumps(list(deps))}", f'bin = {{ {name} = "{bin_path}" }}']
+        if post_install:
+            # a TOML literal string, so the shell command needs no escaping
+            lines.append(f"post_install = '{post_install}'")
+        lines += [
+            "check = {}",
+            "[external]",
+            "[release]",
+            'type = "static"',
+            'tag = "v1.0"',
+            "[download]",
+            'type = "url"',
+            f'url = "{self.base_url}/{{{{ asset }}}}"',
+            "[asset]",
+            *(f'{platform} = "{asset}"' for platform in PLATFORMS),
+        ]
+        self.specs.mkdir(exist_ok=True)
+        (self.specs / f"{name}.toml").write_text("\n".join(lines) + "\n")
+
+    def pmg(self, *args: str, ok: bool = True) -> subprocess.CompletedProcess[str]:
+        env = {
+            key: value
+            for key, value in os.environ.items()
+            if not key.startswith(("XDG_", "PMG_SPECS"))
+        }
+        env |= {"HOME": str(self.home), "PMG_SPECS": str(self.specs)}
+        result = subprocess.run(  # noqa: S603
+            [sys.executable, str(PMG_PATH), *args],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert (result.returncode == 0) == ok, result.stderr
+        return result
+
+    def run_bin(self, name: str) -> str:
+        return subprocess.check_output([self.bin / name], text=True).strip()  # noqa: S603
+
+    def installed(self) -> dict[str, str]:
+        rows = (line.split() for line in self.pmg("list").stdout.splitlines())
+        return {name: kind for name, _, kind in rows}
 
 
-def test_run_download_command_not_supported(tmp_path: Path) -> None:
-    pkg = pmg.decode(static_spec('type = "command"\ncmd = "true"'))
-    with pytest.raises(NotImplementedError):
-        pmg.run_download(pkg, "v1.2.3", "macos_arm64", tmp_path)
+@pytest.fixture
+def env(tmp_path: Path, server: tuple[str, Path]) -> Env:
+    base_url, assets = server
+    assets_dir = assets / tmp_path.name
+    assets_dir.mkdir()
+    return Env(tmp_path, f"{base_url}/{tmp_path.name}", assets_dir)
 
 
-@online
-def test_fetch_release_github() -> None:
-    assert pmg.fetch_release(pmg.decode(pmg.bat_test)).startswith("v")
+def test_install_resolves_dependencies(env: Env) -> None:
+    env.add_package("app", deps=("lib",))
+    env.add_package("lib", deps=("base",))
+    env.add_package("base")
+    env.pmg("install", "app")
+    assert env.run_bin("app") == "app 1.0"
+    assert env.run_bin("base") == "base 1.0"
+    assert env.installed() == {"app": "explicit", "base": "dependency", "lib": "dependency"}
 
 
-@online
-@pytest.mark.parametrize(
-    "host", ["glibc_x64", "glibc_arm64", "musl_x64", "musl_arm64", "macos_arm64"]
-)
-def test_run_download_github(tmp_path: Path, host: str) -> None:
-    bat = pmg.decode(pmg.bat_test)
-    tag = pmg.fetch_release(bat)
-    archive = pmg.run_download(bat, tag, host, tmp_path)
-    assert archive.name == pmg.render(bat.asset[host], tag)
-    assert archive.stat().st_size > 1_000_000
+@pytest.mark.parametrize("archive_format", ["tar.gz", "zip", "bare"])
+def test_install_unpacks_archive_formats(env: Env, archive_format: ArchiveFormat) -> None:
+    # tar.gz has a top-level dir to strip; zip must keep the executable bit it stores
+    env.add_package("tool", archive_format=archive_format)
+    env.pmg("install", "tool")
+    assert env.run_bin("tool") == "tool 1.0"
 
 
-@online
-def test_run_download_url(tmp_path: Path) -> None:
-    spec = pmg.bat_test.replace(
-        '[download]\ntype = "github"',
-        '[download]\ntype = "url"\n'
-        'url = "https://github.com/sharkdp/bat/releases/download/{{ tag }}/{{ asset }}"',
-    )
-    bat = pmg.decode(spec)
-    archive = pmg.run_download(bat, "v0.26.1", "macos_arm64", tmp_path)
-    assert archive.name == "bat-v0.26.1-aarch64-apple-darwin.tar.gz"
-    assert archive.stat().st_size > 1_000_000
+def test_autoremove_removes_orphans_transitively(env: Env) -> None:
+    env.add_package("app", deps=("lib",))
+    env.add_package("lib", deps=("base",))
+    env.add_package("base")
+    env.pmg("install", "app")
+    env.pmg("uninstall", "app")
+    assert env.installed() == {"base": "dependency", "lib": "dependency"}
+    env.pmg("autoremove")
+    assert env.installed() == {}
+    assert list(env.bin.iterdir()) == []
 
 
-@online
-def test_download_file_checksum(tmp_path: Path) -> None:
-    url = (
-        "https://github.com/sharkdp/bat/releases/download/v0.26.1/"
-        "bat-v0.26.1-aarch64-apple-darwin.tar.gz"
-    )
-    digest = "sha256:e30beff26779c9bf60bb541e1d79046250cb74378f2757f8eb250afddb19e114"
-    dest = tmp_path / "bat.tar.gz"
-    with pytest.raises(ChecksumMismatchError):
-        pmg.download_file(url, dest, "sha256:" + "0" * 64)
-    assert not dest.exists()
-    # the .part left by the mismatch must not be resumed
-    assert pmg.download_file(url, dest, digest) == dest
+def test_autoremove_keeps_dependency_requested_directly(env: Env) -> None:
+    env.add_package("app", deps=("lib",))
+    env.add_package("lib")
+    env.pmg("install", "app", "lib")
+    env.pmg("uninstall", "app")
+    env.pmg("autoremove")
+    assert env.installed() == {"lib": "explicit"}
+
+
+def test_install_promotes_dependency_to_explicit(env: Env) -> None:
+    env.add_package("app", deps=("lib",))
+    env.add_package("lib")
+    env.pmg("install", "app")
+    env.pmg("install", "lib")
+    env.pmg("uninstall", "app")
+    env.pmg("autoremove")
+    assert env.installed() == {"lib": "explicit"}
+
+
+def test_uninstall_refuses_needed_dependency(env: Env) -> None:
+    env.add_package("app", deps=("lib",))
+    env.add_package("lib")
+    env.pmg("install", "app")
+    assert "app depends on lib" in env.pmg("uninstall", "lib", ok=False).stderr
+    # removing both at once is fine, dependents go first
+    env.pmg("uninstall", "lib", "app")
+    assert env.installed() == {}
+
+
+def test_install_refuses_to_overwrite_foreign_file(env: Env) -> None:
+    env.add_package("tool")
+    env.bin.mkdir(parents=True)
+    (env.bin / "tool").write_text("mine")
+    assert "exists and does not belong to tool" in env.pmg("install", "tool", ok=False).stderr
+    assert (env.bin / "tool").read_text() == "mine"
+    assert env.installed() == {}
+
+
+def test_failed_post_install_leaves_nothing(env: Env) -> None:
+    env.add_package("tool", post_install="exit 3")
+    assert "exit code 3" in env.pmg("install", "tool", ok=False).stderr
+    assert not (env.bin / "tool").exists()
+    assert env.installed() == {}
+    assert list((env.home / ".local" / "share" / "pmg" / "tmp").iterdir()) == []
+
+
+def test_post_install_files_are_installed_and_tracked(env: Env) -> None:
+    env.add_package("tool", post_install='cp "$PREFIX/bin/tool" "$PREFIX/bin/tool-copy"')
+    env.pmg("install", "tool")
+    assert env.run_bin("tool-copy") == "tool 1.0"
+    env.pmg("uninstall", "tool")
+    assert list(env.bin.iterdir()) == []
+
+
+def test_dependency_cycle(env: Env) -> None:
+    env.add_package("a", deps=("b",))
+    env.add_package("b", deps=("a",))
+    assert "dependency cycle" in env.pmg("install", "a", ok=False).stderr
+    assert env.installed() == {}
+
+
+@pytest.mark.skipif(os.getenv("PMG_OFFLINE") == "1", reason="PMG_OFFLINE=1")
+def test_install_bat_from_github(tmp_path: Path) -> None:
+    env = {key: value for key, value in os.environ.items() if not key.startswith("XDG_")}
+    env["HOME"] = str(tmp_path)
+    subprocess.check_call([sys.executable, str(PMG_PATH), "install", "bat"], env=env)  # noqa: S603
+    bat = tmp_path / ".local" / "bin" / "bat"
+    version = subprocess.check_output([bat, "--version"], text=True)  # noqa: S603
+    assert version.startswith("bat ")
