@@ -1,5 +1,5 @@
 name: Weekly
-# musl (micromamba, Rust) and all (every package) take long, so they run weekly instead of on every push
+# musl (micromamba, Rust) and all (every package, on macOS without Homebrew) take long, so they run weekly
 on:
   schedule:
     - cron: "0 5 * * 1" # Monday 05:00 UTC
@@ -26,5 +26,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: ./tests/run_tests.sh -i ${{ matrix.image }} all
+        env:
+          ZSHSETUP_GH_TOKEN: ${{ github.token }}
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Remove Homebrew
+        run: sudo rm -rf /opt/homebrew /usr/local/Homebrew
+      - run: |
+          env -i HOME="$HOME" USER="$USER" TERM=dumb PATH=/usr/bin:/bin:/usr/sbin:/sbin \
+            ZSHSETUP_GH_TOKEN="$ZSHSETUP_GH_TOKEN" ./tests/run_tests.sh --native all
         env:
           ZSHSETUP_GH_TOKEN: ${{ github.token }}
