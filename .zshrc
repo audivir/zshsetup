@@ -41,6 +41,21 @@ __package_manager() {
   "$ZSHSETUP_HOME/packages/$package.sh" package
 }
 
+# installs a missing tool, warns instead of aborting and skips a failed install for a day
+__require() {
+  local package marker
+  package="$1"
+  marker="$ZSHSETUP_HOME/failed/$package"
+  __available "$package" && return 0
+  [ -n "$(find "$marker" -mtime -1 2>/dev/null)" ] && return 1
+  if __package_manager "$package" && __available "$package"; then
+    rm -f "$marker"
+    return 0
+  fi
+  mkdir -p "${marker%/*}" && touch "$marker"
+  __eprint "zshsetup: installing $package failed, skipping it for a day (retry with install_manual $package)"
+}
+
 __source() {
   local env
   env=$("$@") || return 1
@@ -150,50 +165,36 @@ __init_zshsetup() {
     alias homebrewupdate='brew update; brew upgrade --formulae --yes && brew cu --yes && cd /opt/homebrew && git stash pop &>/dev/null || true && cd -'
   fi
   # BEGIN CURL
-  if ! __available curl && ! __available wget; then
-    __package_manager curl || return 1
-  fi
+  __available wget || __require curl
   # END CURL
 
   # BEGIN PYTHON
-  if ! __available uv; then
-    __package_manager uv || return 1
+  __require uv
+  if __require uvc; then
+    __source command uvc shell zsh
   fi
-  if ! __available uvc; then
-    __package_manager uvc || return 1
-  fi
-  __source command uvc shell zsh || return 1
   # END PYTHON
 
   # BEGIN JQ
-  if ! __available jq; then
-    __package_manager jq || return 1
-  fi
+  __require jq
   # END JQ
 
   # BEGIN GAWK
-  if ! __available gawk; then
-    __package_manager gawk || return 1
-  fi
+  __require gawk
   # END GAWK
   #
   # BEGIN MICROMAMBA
   # micromamba and conda-forge packages need glibc
-  if [ ! -e /lib/ld-musl-x86_64.so.1 ] && [ ! -e /lib/ld-musl-aarch64.so.1 ]; then
-    if ! __available micromamba; then
-      __package_manager micromamba || return 1
-    fi
+  if [ ! -e /lib/ld-musl-x86_64.so.1 ] && [ ! -e /lib/ld-musl-aarch64.so.1 ] && __require micromamba; then
     alias conda='micromamba'
-    __source command micromamba shell hook --shell zsh || return 1
+    __source command micromamba shell hook --shell zsh
     export MAMBA_ROOT_PREFIX="$XDG_DATA_HOME/micromamba"
   fi
   # END MICROMAMBA
 
   # BEGIN GO
   PATH="$XDG_DATA_HOME/go/bin:$XDG_DATA_HOME/golang/bin:$PATH"
-  if ! __available go; then
-    __package_manager go || return 1
-  fi
+  __require go
   if [ -d "$XDG_DATA_HOME/golang" ]; then
     export GOROOT="$XDG_DATA_HOME/golang"
   fi
@@ -204,15 +205,11 @@ __init_zshsetup() {
   PATH="$XDG_DATA_HOME/cargo/bin:/opt/homebrew/opt/rustup/bin:$PATH"
   export RUSTUP_HOME="$XDG_DATA_HOME/rustup"
   export CARGO_HOME="$XDG_DATA_HOME/cargo"
-  if ! __available rustup; then
-    __package_manager rustup || return 1
-  fi
+  __require rustup
   # END RUST
 
   # BEGIN ZIG
-  if [ -n "$ZSHSETUP_REQUIRE_ZIG" ] && ! __available zig; then
-    __package_manager zig || return 1
-  fi
+  [ -n "$ZSHSETUP_REQUIRE_ZIG" ] && __require zig
   # END ZIG
 
   # BEGIN JAVASCRIPT
@@ -221,23 +218,13 @@ __init_zshsetup() {
   export BUN_RUNTIME_TRANSPILER_CACHE_PATH="$XDG_CACHE_HOME/bun/runtime"
   export BUN_CONFIG_DIR="$XDG_CONFIG_HOME/bun"
   PATH="$BUN_INSTALL/bin:$PATH"
-  if ! __available bun; then
-    __package_manager bun || return 1
-  fi
+  __require bun
   # END JAVASCRIPT
 
   # BEGIN EXTRA TOOLS
-  if ! __available bat; then
-    __package_manager bat || return 1
-  fi
-
-  if ! __available micro; then
-    __package_manager micro || return 1
-  fi
-
-  if ! __available kv; then
-    __package_manager kv || return 1
-  fi
+  __require bat
+  __require micro
+  __require kv
   # END EXTRA TOOLS
 
   # BEGIN ALIASES
@@ -296,6 +283,8 @@ update_zshsetup() {
   git merge || __eprint "Failed to merge updates"
   popd || true
 
+  rm -rf "$ZSHSETUP_HOME/failed"
+
   local packages
   packages=(curl git zig make gawk jq micromamba go rustup uv python3 uvc bun bat micro kv)
   for p in "${packages[@]}"; do
@@ -303,17 +292,20 @@ update_zshsetup() {
   done
 
   # omz only exists once oh-my-zsh is sourced, so run its upgrade script directly
-  local omz_dir
+  local omz_dir omz_cache
   omz_dir="${ZSH:-$ZSHSETUP_HOME/oh-my-zsh}"
+  [ -f "$omz_dir/tools/upgrade.sh" ] || return 0
   ZSH="$omz_dir" zsh -f "$omz_dir/tools/upgrade.sh" -v default || __eprint "Failed to update oh-my-zsh"
   # keeps oh-my-zsh from asking to update again, like omz update does
   zmodload zsh/datetime
-  echo "LAST_EPOCH=$((EPOCHSECONDS / 60 / 60 / 24))" >|"${ZSH_CACHE_DIR:-$omz_dir/cache}/.zsh-update"
+  omz_cache="${ZSH_CACHE_DIR:-$omz_dir/cache}"
+  mkdir -p "$omz_cache" && echo "LAST_EPOCH=$((EPOCHSECONDS / 60 / 60 / 24))" >|"$omz_cache/.zsh-update"
 }
 
 # installs manually packaged tools
 install_manual() {
   for p in "$@"; do
+    rm -f "$ZSHSETUP_HOME/failed/$p"
     "$ZSHSETUP_HOME/packages/$p.sh" install || __eprint "Failed to install $p"
   done
 }
@@ -321,6 +313,7 @@ install_manual() {
 # uninstalls a single package
 uninstall_manual() {
   for p in "$@"; do
+    rm -f "$ZSHSETUP_HOME/failed/$p"
     "$ZSHSETUP_HOME/packages/$p.sh" uninstall || __eprint "Failed to uninstall $p"
   done
 }
@@ -383,7 +376,7 @@ fi
 __init_zshsetup || return 1
 
 # CLEANUP
-unfunction __assure_link __assure_dir __package_manager __source __available
+unfunction __assure_link __assure_dir __package_manager __require __source __available
 unfunction __init_cache __init_zshsetup_env __init_zshsetup __install_zshsetup
 
 # SOURCE POST-INIT
