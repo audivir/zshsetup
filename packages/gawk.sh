@@ -28,8 +28,9 @@ fetch() {
 # GNU only ships sources, so build them with the system compiler or zig
 install() {
   require_cmd make zig python3 || return 1
-  local version url tmpdir
+  local version url tmpdir cc
   version="$1"
+  cc="$(zig_cc)"
   url="https://ftp.gnu.org/gnu/gawk/gawk-$version.tar.xz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
@@ -38,9 +39,9 @@ install() {
   (
     cd "$tmpdir/gawk-$version"
     # zig cannot link the loadable extensions as macOS bundles
-    ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="zig cc -w" LD="zig cc" ./configure --disable-nls --disable-dependency-tracking --disable-pma --disable-extensions \
+    ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="$cc -w" LD="$cc" ./configure --disable-nls --disable-dependency-tracking --disable-pma --disable-extensions \
       --without-readline --without-mpfr >/dev/null
-    make -j4 ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="zig cc -w" LD="zig cc" >/dev/null
+    make -j4 ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="$cc -w" LD="$cc" >/dev/null
   )
   mv "$tmpdir/gawk-$version/gawk" "$local_bin"
   rm -rf "$tmpdir"

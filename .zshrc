@@ -206,6 +206,12 @@ __init_zshsetup() {
   export RUSTUP_HOME="$XDG_DATA_HOME/rustup"
   export CARGO_HOME="$XDG_DATA_HOME/cargo"
   __require rustup
+  # see install_musl_support in packages/rustup.sh
+  if [ -d "$XDG_DATA_HOME/rustup-musl" ]; then
+    [ -e /usr/lib/libgcc_s.so.1 ] || export LD_LIBRARY_PATH="$XDG_DATA_HOME/rustup-musl/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    __available cc || PATH="$XDG_DATA_HOME/rustup-musl/bin:$PATH"
+    export "CARGO_TARGET_$(uname -m | tr '[:lower:]' '[:upper:]')_UNKNOWN_LINUX_MUSL_RUSTFLAGS=-C link-self-contained=no"
+  fi
   # END RUST
 
   # BEGIN ZIG

@@ -126,6 +126,15 @@ with open(sys.argv[1], "rb") if len(sys.argv) > 1 else sys.stdin.buffer as f:
     print(hashlib.file_digest(f, "sha256").hexdigest())' "$@"
 }
 
+# static on musl: zig misaligns environ when linking musl dynamically on aarch64
+zig_cc() {
+  if [ "$(__libc)" = "musl" ]; then
+    echo "zig cc -target $(uname -m)-linux-musl"
+  else
+    echo "zig cc"
+  fi
+}
+
 get_latest_github() {
   require_cmd jq || return 1
   local repo

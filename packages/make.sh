@@ -28,17 +28,18 @@ fetch() {
 # build.sh bootstraps make without an existing make, using the system compiler or zig
 install() {
   require_cmd zig || return 1
-  local version url tmpdir
+  local version url tmpdir cc
   version="$1"
+  cc="$(zig_cc)"
   url="https://ftp.gnu.org/gnu/make/make-$version.tar.gz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
   curl_or_wget "$url" | tar -xzC "$tmpdir"
   (
     cd "$tmpdir/make-$version"
-    ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="zig cc -w" LD="zig cc" \
+    ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="$cc -w" LD="$cc" \
       ./configure --disable-nls --disable-dependency-tracking --without-guile >/dev/null
-    ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="zig cc -w" LD="zig cc" \
+    ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="$cc -w" LD="$cc" \
       sh build.sh >/dev/null
   )
   mv "$tmpdir/make-$version/make" "$local_bin"

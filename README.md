@@ -66,10 +66,23 @@ The following packages have bootstrap scripts in `packages/`:
 - `micromamba`: Fast standalone conda package manager (requires `jq`)
 - `oh-my-zsh`: Community-driven zsh configuration framework (requires `git`, `zsh`)
 - `python3`: Python programming language interpreter (requires `uv`)
-- `rustup`: Rust toolchain installer (requires `jq`)
+- `rustup`: Rust toolchain installer (requires `jq`, and `zig` on musl)
 - `uv`: Fast Python package and project manager (requires `jq`)
 - `uvc`: Python command wrapper and cache tool (requires `python3`)
 - `zig`: Zig compiler and toolchain (requires `python3`)
+
+## Platform Notes
+
+- musl (Alpine): `micromamba` is skipped, since it and all conda-forge packages need glibc,
+  which cannot be installed without root.
+- musl: `make` and `gawk` are built statically, as zig misaligns `environ` when linking musl
+  dynamically on aarch64.
+- musl: Rust toolchains need `libgcc_s` and a `cc`; `rustup` builds both with zig into
+  `~/.local/share/rustup-musl`, and `.zshrc` only uses them if the system has none.
+- RHEL/CentOS 7-8: the CA bundle is not in `/etc/ssl`, so `SSL_CERT_FILE` is exported.
+- Without `curl`, `wget`, and `python3` (bare Debian/Ubuntu): downloads fall back to `apt-helper`
+  without TLS verification, and the bootstrap `curl` is checked against pinned SHA-256 hashes.
+- A failed install is skipped for a day (see `failed/`); retry with `install_manual <package>`.
 
 ## Environment Variables
 
