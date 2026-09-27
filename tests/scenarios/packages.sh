@@ -9,7 +9,7 @@ if [ -e /etc/ssl/certs/ca-certificates.crt ] || [ -e /etc/ssl/cert.pem ]; then
 else
   echo "  info  no CA certificates"
 fi
-for p in ${ZSHSETUP_TEST_PACKAGES:-curl jq uv bat python3 git uvc}; do
+for p in ${ZSHSETUP_TEST_PACKAGES:-curl jq uv bat python3 git uvc bun}; do
   case "$p" in
     uvc) arg=--help ;;
     *) arg=--version ;;

@@ -1,11 +1,11 @@
 #!/bin/sh
 # musl extras through a shell start: micromamba with a user-space glibc (create, activate, run,
-# completion), Rust with zig's libgcc_s and cc, and statically built make and gawk (slow)
+# completion), Rust with zig's libgcc_s and cc, bun with Alpine's libstdc++, and statically built make and gawk (slow)
 . "${ZSHSETUP_TEST_REPO:-/zshsetup}/tests/lib.sh"
 is_musl || skip "musl only"
 setup_zshsetup
 ln -s "$ZSHSETUP_HOME/.zshrc" "$HOME/.zshrc"
-export ZSHSETUP_CHOICE=manual ZSHSETUP_REQUIRE_MICROMAMBA=1 ZSHSETUP_DISABLE_BUN=1 ZSHSETUP_DISABLE_GO=1
+export ZSHSETUP_CHOICE=manual ZSHSETUP_REQUIRE_MICROMAMBA=1 ZSHSETUP_DISABLE_GO=1
 
 check "the first shell start installs everything" zsh -i -c 'echo ready'
 check "no install failed" test ! -e "$ZSHSETUP_HOME/failed"
@@ -20,6 +20,7 @@ echo "completion: $(__mamba_exe completer cr)"
 cd "$(mktemp -d)" && cargo new -q hello && cd hello && cargo run -q
 echo "make: $(make --version | head -n 1)"
 echo "gawk: $(gawk --version | head -n 1)"
+echo "bun: $(bun -e "console.log([1, 2].map((x) => x * 2).join())")"
 ' 2>&1)"
 check "micromamba creates an environment" contains "$out" "^created"
 check "the patched environment runs python with numpy" contains "$out" "^numpy "
@@ -30,5 +31,10 @@ check "micromamba completion works through the wrapper" contains "$out" "complet
 check "cargo builds and runs with zig as cc" contains "$out" "Hello, world!"
 check "make runs" contains "$out" "make: GNU Make"
 check "gawk runs" contains "$out" "gawk: GNU Awk"
+check "bun runs" contains "$out" "bun: 2,4"
+if [ ! -e /usr/lib/libstdc++.so.6 ]; then
+  check "bun's libstdc++ comes from Alpine's packages" test -e "$XDG_DATA_HOME/bun-musl/lib/libstdc++.so.6"
+fi
+check "uninstalling bun removes its libraries" sh -c "'$ZSHSETUP_HOME/packages/bun.sh' uninstall && test ! -e '$XDG_DATA_HOME/bun-musl'"
 
 finish

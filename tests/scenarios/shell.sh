@@ -28,7 +28,7 @@ for setting in "ZSHSETUP_CHOICE=manual" "ZSHSETUP_REQUIRE_PYTHON3=1" "ZSHSETUP_D
   check "preinit.zsh saves $setting" grep -qx "export $setting" "$home/preinit.zsh"
 done
 check "ZSHSETUP_REQUIRE_PYTHON3 installs python3" test -e "$XDG_BIN_HOME/python3"
-check "ZSHSETUP_DISABLE_BUN skips bun" test ! -e "$XDG_DATA_HOME/bun/bin/bun"
+check "ZSHSETUP_DISABLE_BUN skips bun" test ! -e "$XDG_BIN_HOME/bun"
 check "ZSHSETUP_DISABLE_JQ still installs jq as a dependency" test -x "$XDG_BIN_HOME/jq"
 check "a failed install leaves a marker" test -e "$home/failed/micro"
 check "a failed install warns" grep -q "installing micro failed" /tmp/install-zshrc.log

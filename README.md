@@ -60,7 +60,7 @@ The following packages have bootstrap scripts in `packages/`. All of them downlo
 which is installed first if missing:
 
 - `bat`: `cat` clone with syntax highlighting and Git integration (requires `jq`)
-- `bun`: Fast all-in-one JavaScript/TypeScript runtime and toolkit (requires `jq`, `python3`)
+- `bun`: Fast all-in-one JavaScript/TypeScript runtime and toolkit (requires `jq`, `python3`, and `patchelf` on musl)
 - `curl`: Command-line tool for transferring data with URLs (requires `jq`, `python3`)
 - `gawk`: GNU Awk text processing utility (requires `make`, `zig`, `python3`)
 - `git`: Distributed version control system (requires `jq`)
@@ -87,8 +87,11 @@ which is installed first if missing:
   patches new environments with `patchelf`; it also handles `micromamba run` (with `-n`/`-p`).
 - musl: `make` and `gawk` are built statically, as zig misaligns `environ` when linking musl
   dynamically on aarch64.
-- musl: Rust toolchains need `libgcc_s` and a `cc`; `rustup` builds both with zig into
-  `~/.local/share/rustup-musl`, and `.zshrc` only uses them if the system has none.
+- musl: Rust toolchains need `libgcc_s` and a `cc`; `rustup` puts GCC's `libgcc_s` and a zig
+  `cc` wrapper into `~/.local/share/rustup-musl`, and `.zshrc` only uses them if the system has none.
+- musl: `bun` needs `libstdc++` and `libgcc`; without them on the system, they are taken from
+  Alpine's packages into `~/.local/share/bun-musl`, and `bun` finds them through its RUNPATH.
+  `packages/musl/apk-extract` extracts Alpine packages like these without `apk` or root.
 - Without `curl`: the static `curl` is bootstrapped with `wget`, `python3`, or `apt-helper`
   (bare Debian/Ubuntu, without TLS verification) and checked against pinned SHA-256 hashes.
   Its musl build is used on all Linux, as the glibc one crashes on older glibc (CentOS 7).
@@ -119,7 +122,8 @@ them to `preinit.zsh` for later shells.
 `./tests/run_tests.sh` runs the scenarios in `tests/scenarios/` in fresh containers (Alpine,
 Debian, Ubuntu, Rocky Linux 8), or with `--native` on the current machine with a temporary `HOME`:
 `env` (settings and choices), `packages`, `choices` (apt), `lifecycle` (upgrade, uninstall),
-`shell` (a full installation from the working tree), and the slow `musl` (micromamba, Rust).
+`shell` (a full installation from the working tree), and the slow `musl` (micromamba, Rust, bun) and
+`all` (every package through a shell start).
 Set `ZSHSETUP_GH_TOKEN` to avoid GitHub's API rate limit.
 
 ## License

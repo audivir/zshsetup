@@ -22,19 +22,16 @@ fetch() {
   github_api "repos/rust-lang/rustup/tags" | jq -r '.[0].name'
 }
 
-# musl toolchains need libgcc_s and a cc, which bare Alpine lacks, so both are built with zig
+# musl toolchains need libgcc_s and a cc, which bare Alpine lacks: GCC's libgcc_s from Alpine, and zig as cc
 install_musl_support() {
   require_cmd zig || return 1
-  local target lib_dir
+  local target apk_dir
   target="$(uname -m)-linux-musl"
-  lib_dir="$(cd / && zig env | sed -n 's/^ *\.lib_dir = "\(.*\)",$/\1/p')"
-  [ "${lib_dir#/}" = "$lib_dir" ] && lib_dir="/$lib_dir"
   mkdir -p "$musl_dir/lib" "$musl_dir/bin"
-  zig c++ -target "$target" -shared -fPIC -O2 -o "$musl_dir/lib/libgcc_s.so.1" -Wl,-soname,libgcc_s.so.1 \
-    -I"$lib_dir/libunwind/include" -D_LIBUNWIND_IS_NATIVE_ONLY -funwind-tables -fno-exceptions -fno-rtti -nostdinc++ \
-    "$lib_dir/libunwind/src/libunwind.cpp" "$lib_dir/libunwind/src/UnwindLevel1.c" \
-    "$lib_dir/libunwind/src/UnwindLevel1-gcc-ext.c" "$lib_dir/libunwind/src/UnwindRegistersRestore.S" \
-    "$lib_dir/libunwind/src/UnwindRegistersSave.S"
+  apk_dir="$(mktemp -d)"
+  "$ZSHSETUP_HOME/packages/musl/apk-extract" "$apk_dir" libgcc
+  cp "$apk_dir/usr/lib/libgcc_s.so.1" "$musl_dir/lib/"
+  rm -rf "$apk_dir"
   # zig's linker rejects the cortex-a53 workaround flag rustc passes on aarch64
   # shellcheck disable=SC2016
   printf '%s\n' '#!/bin/sh' 'for a do' '  shift' '  case "$a" in' '    -Wl,--fix-cortex-a53-843419) ;;' \
