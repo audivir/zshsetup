@@ -29,7 +29,8 @@ install() {
   local version py_bin
   version="${1:-3.12}"
   uv python install "$version"
-  py_bin="$(uv python find "$version")"
+  # only uv's own install, not whatever python3 (or active env) comes first on PATH
+  py_bin="$(uv python find --managed-python "$version")"
   ln -sf "$py_bin" "$local_bin"
   ln -sf "$py_bin" "$XDG_BIN_HOME/python"
 }
