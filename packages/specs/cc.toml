@@ -1,6 +1,6 @@
 # a C compiler through zig for hosts without one, for building from source and linking Rust
 deps = ["zig"]
-check = { cmd = ["cc", "--version"] }
+check = { cmd = ["cc", "--version"], dev_tool = true }
 [external]
 apt = "gcc"
 apk = "gcc"

@@ -6,7 +6,7 @@ links.git-receive-pack = "{{ dir }}/bin/git-receive-pack"
 links.git-upload-archive = "{{ dir }}/bin/git-upload-archive"
 links.git-upload-pack = "{{ dir }}/bin/git-upload-pack"
 completions.git = { bash = "share/bash-completion/completions/git" }
-check = {}
+check = { dev_tool = true }
 
 [external]
 brew = "git"

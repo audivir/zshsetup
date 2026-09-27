@@ -1,6 +1,6 @@
 # uv installs a standalone CPython, which is relocatable, into the package dir
 deps = ["uv"]
-check = { cmd = ["python3", "--version"] }
+check = { cmd = ["python3", "--version"], dev_tool = true }
 
 [external]
 brew = "python3"
