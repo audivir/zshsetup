@@ -1,0 +1,30 @@
+name: Weekly
+# musl (micromamba, Rust) and all (every package) take long, so they run weekly instead of on every push
+on:
+  schedule:
+    - cron: "0 5 * * 1" # Monday 05:00 UTC
+  workflow_dispatch:
+jobs:
+  musl:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+      - run: ./tests/run_tests.sh -i alpine:3.22 musl
+        env:
+          ZSHSETUP_GH_TOKEN: ${{ github.token }}
+  all:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+        image: ['alpine:3.22', 'debian:stable-slim', 'ubuntu:24.04', 'centos:7', 'rockylinux:8']
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+      - run: ./tests/run_tests.sh -i ${{ matrix.image }} all
+        env:
+          ZSHSETUP_GH_TOKEN: ${{ github.token }}
