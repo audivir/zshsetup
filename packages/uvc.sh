@@ -20,7 +20,7 @@ fetch() {
   require_cmd python3 || return 1
   local url
   url="https://github.com/audivir/uvc/raw/refs/heads/main/uvc"
-  curl_or_wget "$url" | sha256
+  curl -fsSL "$url" | sha256
 }
 
 # installs the most recent version
@@ -29,7 +29,7 @@ install() {
   url="https://github.com/audivir/uvc/raw/refs/heads/main/uvc"
   tmpfile=$(mktemp)
   trap 'rm -f "$tmpfile"' EXIT INT TERM
-  curl_or_wget "$url" "$tmpfile"
+  curl -fsSL "$url" -o "$tmpfile"
   chmod +x "$tmpfile"
   mv "$tmpfile" "$XDG_BIN_HOME/uvc"
   trap - EXIT INT TERM

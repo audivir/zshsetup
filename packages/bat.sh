@@ -28,7 +28,7 @@ install() {
   url="https://github.com/sharkdp/bat/releases/download/$version/bat-$version-$arch-$os.tar.gz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
-  curl_or_wget "$url" | tar -xzC "$tmpdir"
+  curl -fsSL "$url" | tar -xzC "$tmpdir"
   chmod +x "$tmpdir/bat-$version-$arch-$os/bat"
   mv "$tmpdir/bat-$version-$arch-$os/bat" "$XDG_BIN_HOME/bat"
   rm -rf "$tmpdir"

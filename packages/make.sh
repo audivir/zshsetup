@@ -17,7 +17,7 @@ check() {
 
 # fetches the latest version
 fetch() {
-  curl_or_wget "https://ftp.gnu.org/gnu/make/" \
+  curl -fsSL "https://ftp.gnu.org/gnu/make/" \
     | grep -o 'make-[0-9.]*\.tar\.gz"' \
     | sed 's/^make-//; s/\.tar\.gz"$//' \
     | sort -t. -k1,1n -k2,2n -k3,3n \
@@ -34,7 +34,7 @@ install() {
   url="https://ftp.gnu.org/gnu/make/make-$version.tar.gz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
-  curl_or_wget "$url" | tar -xzC "$tmpdir"
+  curl -fsSL "$url" | tar -xzC "$tmpdir"
   (
     cd "$tmpdir/make-$version"
     ARFLAGS="cr" AR="zig ar" RANLIB="zig ranlib" CC="$cc -w" LD="$cc" \

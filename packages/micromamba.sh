@@ -44,7 +44,7 @@ install() {
   url="https://github.com/mamba-org/micromamba-releases/releases/download/$version/micromamba-$os-$arch"
   tmpfile=$(mktemp)
   trap 'rm -f "$tmpfile"' EXIT INT TERM
-  curl_or_wget "$url" "$tmpfile"
+  curl -fsSL "$url" -o "$tmpfile"
   chmod +x "$tmpfile"
   mv "$tmpfile" "$target"
   trap - EXIT INT TERM

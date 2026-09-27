@@ -6,4 +6,4 @@ set -euo pipefail
 
 require_cmd zsh git || return 1
 url="https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh"
-curl_or_wget "$url" | sh -s -- -unattended --keep-zshrc
+curl -fsSL "$url" | sh -s -- --unattended --keep-zshrc

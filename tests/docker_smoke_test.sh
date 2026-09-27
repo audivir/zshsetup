@@ -45,8 +45,12 @@ mkdir -p "$ZSHSETUP_HOME" "$XDG_BIN_HOME" "$XDG_DATA_HOME"
 cp -R /zshsetup/packages /zshsetup/package_manager.py /zshsetup/simple_term_menu.py "$ZSHSETUP_HOME/"
 failed=0
 for p in "$@"; do
-  if "$ZSHSETUP_HOME/packages/$p.sh" install >"/tmp/$p.log" 2>&1 && "$p" --version >/dev/null 2>&1; then
-    echo "  ok    $p ($("$p" --version 2>&1 | head -n 1))"
+  case "$p" in
+    uvc) check=--help ;;
+    *) check=--version ;;
+  esac
+  if "$ZSHSETUP_HOME/packages/$p.sh" install >"/tmp/$p.log" 2>&1 && "$p" "$check" >/dev/null 2>&1; then
+    echo "  ok    $p ($("$p" "$check" 2>&1 | head -n 1))"
   else
     echo "  FAIL  $p"
     sed "s/^/        /" "/tmp/$p.log" | tail -n 5
@@ -59,7 +63,7 @@ exit "$failed"
 status=0
 for image in "${IMAGES[@]}"; do
   echo "== $image"
-  if ! docker run --rm -v "$ROOT_DIR:/zshsetup:ro" "$image" sh -c "$container_script" sh "${PACKAGES[@]}"; then
+  if ! docker run --rm -e ZSHSETUP_GH_TOKEN -v "$ROOT_DIR:/zshsetup:ro" "$image" sh -c "$container_script" sh "${PACKAGES[@]}"; then
     status=1
   fi
 done

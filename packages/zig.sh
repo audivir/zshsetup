@@ -20,7 +20,7 @@ check() {
 # fetches the latest version
 # jq may not be installed yet, and the index lists the newest release first
 fetch() {
-  curl_or_wget "$index_url" \
+  curl -fsSL "$index_url" \
     | grep -o 'https://ziglang.org/download/[0-9.]*/' \
     | awk -F/ 'NR == 1 {print $5}'
 }
@@ -34,7 +34,7 @@ install() {
   url="https://ziglang.org/download/$version/zig-$arch-$os-$version.tar.xz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
-  curl_or_wget "$url" "$tmpdir/zig.tar.xz"
+  curl -fsSL "$url" -o "$tmpdir/zig.tar.xz"
   python3 -m tarfile --filter data -e "$tmpdir/zig.tar.xz" "$tmpdir"
   rm -rf "$install_dir"
   mv "$tmpdir/zig-$arch-$os-$version" "$install_dir"

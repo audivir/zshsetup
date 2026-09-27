@@ -29,7 +29,7 @@ install() {
   url="https://github.com/audivir/git-static/releases/download/$version/git-static-$os-$arch.tar.gz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
-  curl_or_wget "$url" | tar -xzC "$tmpdir"
+  curl -fsSL "$url" | tar -xzC "$tmpdir"
   mkdir -p "$prefix/bin" "$prefix/libexec" "$prefix/share"
   cp -R "$tmpdir/bin/." "$prefix/bin/"
   cp -R "$tmpdir/libexec/." "$prefix/libexec/"

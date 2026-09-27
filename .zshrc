@@ -109,11 +109,6 @@ __init_zshsetup_env() {
     fi
   fi
 
-  # RHEL/CentOS 7-8
-  if [ -z "$SSL_CERT_FILE" ] && [ ! -e /etc/ssl/cert.pem ] && [ -e /etc/pki/tls/cert.pem ]; then
-    export SSL_CERT_FILE=/etc/pki/tls/cert.pem
-  fi
-
   # SETUP HISTORY
   HISTFILE="$ZSHSETUP_HOME/zsh_history"
   HISTSIZE=50000
@@ -165,7 +160,7 @@ __init_zshsetup() {
     alias homebrewupdate='brew update; brew upgrade --formulae --yes && brew cu --yes && cd /opt/homebrew && git stash pop &>/dev/null || true && cd -'
   fi
   # BEGIN CURL
-  __available wget || __require curl
+  __require curl
   # END CURL
 
   # BEGIN PYTHON

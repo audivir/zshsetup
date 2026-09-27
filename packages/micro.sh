@@ -30,7 +30,7 @@ install() {
   url="https://github.com/micro-editor/micro/releases/download/v$version/micro-$version-$os$arch.tar.gz"
   tmpfile="$(mktemp)"
   trap 'rm -f "$tmpfile"' EXIT INT TERM
-  curl_or_wget "$url" | tar -xzO "micro-$version/micro" >"$tmpfile"
+  curl -fsSL "$url" | tar -xzO "micro-$version/micro" >"$tmpfile"
   chmod +x "$tmpfile"
   mv "$tmpfile" "$XDG_BIN_HOME/micro"
   rm -f "$tmpfile"

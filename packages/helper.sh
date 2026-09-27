@@ -4,13 +4,18 @@ set -euo pipefail
 
 . "$ZSHSETUP_HOME/packages/packages.sh"
 
-__available_python3() {
+# macOS' /usr/bin/python3 is a stub that opens the developer tools dialog without them
+__usable_python3() {
   local py
   py="$(command -v python3 2>/dev/null)" || return 1
   if [[ "$OSTYPE" == darwin* ]] && [ "$py" = "/usr/bin/python3" ] && ! /usr/bin/xcode-select -p >/dev/null 2>&1; then
     return 1
   fi
-  "$py" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11, 4) else 1)' >/dev/null 2>&1
+}
+
+__available_python3() {
+  __usable_python3 \
+    && python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11, 4) else 1)' >/dev/null 2>&1
 }
 
 __available_cmd() {
@@ -33,7 +38,7 @@ __bootstrap_python3() {
   set_os_arch "unknown-linux-gnu" "x86_64" "unknown-linux-gnu" "aarch64" "apple-darwin" "aarch64" "unknown-linux-musl"
   url="https://github.com/astral-sh/python-build-standalone/releases/download/20260924/cpython-3.12.14+20260924-$arch-$os-install_only_stripped.tar.gz"
   dir="$(mktemp -d)"
-  if ! curl_or_wget "$url" | tar -xzC "$dir"; then
+  if ! __bootstrap_download "$url" | tar -xzC "$dir"; then
     rm -rf "$dir"
     return 1
   fi
@@ -67,16 +72,17 @@ require_cmd() {
 }
 
 # downloads a file with curl (and falls back to wget if curl is not available)
-curl_or_wget() {
+# downloads without curl, for bootstrapping curl itself and the python3 its installer needs
+__bootstrap_download() {
   local url dest
   url="$1"
   dest="${2:-}"
 
   if command -v curl >/dev/null 2>&1; then
     if [ -n "$dest" ]; then
-      curl --fail-with-body -sSL "$url" -o "$dest"
+      curl -fsSL "$url" -o "$dest"
     else
-      curl --fail-with-body -sSL "$url"
+      curl -fsSL "$url"
     fi
     return
   elif command -v wget >/dev/null 2>&1; then
@@ -88,7 +94,7 @@ curl_or_wget() {
     return
   fi
   # python3 needs CA certificates, so apt-helper is still tried after it fails
-  if command -v python3 >/dev/null 2>&1 && python3 -c 'import os, shutil, sys, urllib.request
+  if __usable_python3 && python3 -c 'import os, shutil, sys, urllib.request
 try:
     with urllib.request.urlopen(sys.argv[1]) as res:
         if len(sys.argv) > 2 and sys.argv[2]:
@@ -135,18 +141,25 @@ zig_cc() {
   fi
 }
 
+# queries the GitHub API, ZSHSETUP_GH_TOKEN lifts its rate limit of 60 requests per hour
+github_api() {
+  local -a auth=()
+  [ -n "${ZSHSETUP_GH_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $ZSHSETUP_GH_TOKEN")
+  curl -fsSL "${auth[@]}" "https://api.github.com/$1"
+}
+
 get_latest_github() {
   require_cmd jq || return 1
   local repo
   repo="$1"
-  curl_or_wget "https://api.github.com/repos/$repo/releases/latest" | jq -r .tag_name
+  github_api "repos/$repo/releases/latest" | jq -r .tag_name
 }
 
 get_latest_crate() {
   require_cmd jq || return 1
   local crate
   crate="$1"
-  curl_or_wget "https://crates.io/api/v1/crates/$crate" | jq -r .crate.max_stable_version
+  curl -fsSL "https://crates.io/api/v1/crates/$crate" | jq -r .crate.max_stable_version
 }
 
 # echoes musl, gnu, or nothing if not Linux
@@ -239,6 +252,11 @@ main() {
   apt="$3"
   cmd="$4"
 
+  case "$cmd" in
+    install | upgrade | fetch)
+      [ "$name" = "curl" ] || require_cmd curl || return 1
+      ;;
+  esac
   case "$cmd" in
     package)
       package_manager "$name" "$brew" "$apt"

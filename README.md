@@ -51,7 +51,8 @@ python3 <(curl --fail-with-body -L https://gist.githubusercontent.com/muendeleza
 
 ## Packages
 
-The following packages have bootstrap scripts in `packages/`:
+The following packages have bootstrap scripts in `packages/`. All of them download with `curl`,
+which is installed first if missing:
 
 - `bat`: `cat` clone with syntax highlighting and Git integration (requires `jq`)
 - `bun`: Fast all-in-one JavaScript/TypeScript runtime and toolkit (requires `jq`, `python3`)
@@ -78,14 +79,14 @@ The following packages have bootstrap scripts in `packages/`:
 
 - musl (Alpine): `micromamba` is skipped, since it and all conda-forge packages need glibc.
   With `ZSHSETUP_REQUIRE_MICROMAMBA_ON_MUSL`, it runs with conda-forge's glibc, and a wrapper
-  patches new environments with `patchelf`; `micromamba run` does not work there, use `activate`.
+  patches new environments with `patchelf`; it also handles `micromamba run` (with `-n`/`-p`).
 - musl: `make` and `gawk` are built statically, as zig misaligns `environ` when linking musl
   dynamically on aarch64.
 - musl: Rust toolchains need `libgcc_s` and a `cc`; `rustup` builds both with zig into
   `~/.local/share/rustup-musl`, and `.zshrc` only uses them if the system has none.
-- RHEL/CentOS 7-8: the CA bundle is not in `/etc/ssl`, so `SSL_CERT_FILE` is exported.
-- Without `curl`, `wget`, and `python3` (bare Debian/Ubuntu): downloads fall back to `apt-helper`
-  without TLS verification, and the bootstrap `curl` is checked against pinned SHA-256 hashes.
+- Without `curl`: the static `curl` is bootstrapped with `wget`, `python3`, or `apt-helper`
+  (bare Debian/Ubuntu, without TLS verification) and checked against pinned SHA-256 hashes.
+  Its musl build is used on all Linux, as the glibc one crashes on older glibc (CentOS 7).
 - A failed install is skipped for a day (see `failed/`); retry with `install_manual <package>`.
 
 ## Environment Variables
@@ -99,6 +100,8 @@ them to `preinit.zsh` for later shells.
 - `ZSHSETUP_REQUIRE_ZIG`: install zig even if no other package requires it (when set and non-empty).
 - `ZSHSETUP_REQUIRE_MICROMAMBA_ON_MUSL`: install micromamba on musl with a user-space glibc
   (when set and non-empty).
+- `ZSHSETUP_GH_TOKEN`: GitHub token for API requests, which are limited to 60 per hour without.
+  It is not saved to `preinit.zsh`.
 - `ZSHSETUP_RUST_TOOLCHAIN`: default toolchain for a manual `rustup` install (`stable` if unset).
 
 ## License

@@ -19,9 +19,7 @@ check() {
 # fetches the latest version
 fetch() {
   require_cmd jq || return 1
-  local url
-  url="https://api.github.com/repos/rust-lang/rustup/tags"
-  curl_or_wget "$url" | jq -r '.[0].name'
+  github_api "repos/rust-lang/rustup/tags" | jq -r '.[0].name'
 }
 
 # musl toolchains need libgcc_s and a cc, which bare Alpine lacks, so both are built with zig
@@ -49,7 +47,7 @@ install() {
   if [ "$(__libc)" = "musl" ]; then
     install_musl_support || return 1
   fi
-  curl_or_wget "https://sh.rustup.rs" | sh -s -- \
+  curl -fsSL "https://sh.rustup.rs" | sh -s -- \
     --default-toolchain "${ZSHSETUP_RUST_TOOLCHAIN:-stable}" \
     --no-update-default-toolchain \
     --no-modify-path -y

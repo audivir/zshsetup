@@ -33,7 +33,7 @@ install() {
   url="https://github.com/NixOS/patchelf/releases/download/$version/patchelf-$version-$arch.tar.gz"
   tmpfile="$(mktemp)"
   trap 'rm -f "$tmpfile"' EXIT INT TERM
-  curl_or_wget "$url" | tar -xzO ./bin/patchelf >"$tmpfile"
+  curl -fsSL "$url" | tar -xzO ./bin/patchelf >"$tmpfile"
   chmod +x "$tmpfile"
   mv "$tmpfile" "$local_bin"
   trap - EXIT INT TERM

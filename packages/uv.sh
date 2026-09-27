@@ -33,7 +33,7 @@ install() {
   url="https://github.com/astral-sh/uv/releases/download/$version/uv-$arch-$os.tar.gz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
-  curl_or_wget "$url" | tar -xzC "$tmpdir"
+  curl -fsSL "$url" | tar -xzC "$tmpdir"
   chmod +x "$tmpdir/uv-$arch-$os/uv" "$tmpdir/uv-$arch-$os/uvx"
   mv "$tmpdir/uv-$arch-$os/uv" "$XDG_BIN_HOME/uv"
   mv "$tmpdir/uv-$arch-$os/uvx" "$XDG_BIN_HOME/uvx"

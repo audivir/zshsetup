@@ -19,7 +19,7 @@ check() {
 fetch() {
   local url
   url="https://go.dev/VERSION?m=text"
-  curl_or_wget "$url" | head -n 1
+  curl -fsSL "$url" | head -n 1
 }
 
 # installs the most recent version
@@ -30,7 +30,7 @@ install() {
   url="https://go.dev/dl/$version.$os-$arch.tar.gz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
-  curl_or_wget "$url" | tar -xzC "$tmpdir"
+  curl -fsSL "$url" | tar -xzC "$tmpdir"
   mv "$tmpdir/go" "$XDG_DATA_HOME/golang"
   rm -rf "$tmpdir"
   trap - EXIT INT TERM

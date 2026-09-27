@@ -17,7 +17,7 @@ check() {
 
 # fetches the latest version
 fetch() {
-  curl_or_wget "https://ftp.gnu.org/gnu/gawk/" \
+  curl -fsSL "https://ftp.gnu.org/gnu/gawk/" \
     | grep -o 'gawk-[0-9.]*\.tar\.xz"' \
     | sed 's/^gawk-//; s/\.tar\.xz"$//' \
     | sort -t. -k1,1n -k2,2n -k3,3n \
@@ -34,7 +34,7 @@ install() {
   url="https://ftp.gnu.org/gnu/gawk/gawk-$version.tar.xz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
-  curl_or_wget "$url" "$tmpdir/gawk.tar.xz"
+  curl -fsSL "$url" -o "$tmpdir/gawk.tar.xz"
   python3 -m tarfile --filter data -e "$tmpdir/gawk.tar.xz" "$tmpdir"
   (
     cd "$tmpdir/gawk-$version"

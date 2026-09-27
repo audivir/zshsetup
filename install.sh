@@ -47,7 +47,7 @@ fi
 if ! __available zsh --help; then
   export PATH="$PATH:$HOME/.local/bin"
   if ! __available zsh --help; then
-    zsh_install="https://raw.githubusercontent.com/romkatv/zsh-bin/master/install"
+    zsh_install="https://raw.githubusercontent.com/romkatv/zsh-bin/v6.1.1/install"
     if __available curl --help || __available wget --help; then
       __download "$zsh_install" | sh -s -- -d "$HOME/.local" -e "no" || exit 1
     else
@@ -69,11 +69,6 @@ if [ -n "${ZSHSETUP_ZSH_ONLY:-}" ]; then
   exit 0
 fi
 
-# RHEL/CentOS 7-8
-if [ -z "${SSL_CERT_FILE:-}" ] && [ ! -e /etc/ssl/cert.pem ] && [ -e /etc/pki/tls/cert.pem ]; then
-  export SSL_CERT_FILE=/etc/pki/tls/cert.pem
-fi
-
 if ! __available git --version; then
   snapshot="$(mktemp -d)"
   mkdir -p "$HOME/.local/bin" "$HOME/.local/share"
@@ -88,4 +83,14 @@ if ! __available git --version; then
   export PATH="$HOME/.local/bin:$PATH"
 fi
 
-__download https://github.com/audivir/zshsetup/raw/refs/heads/main/.zshrc | zsh -s -- install
+# runs .zshrc only when fully downloaded
+zshrc="$(mktemp)"
+if ! __download https://github.com/audivir/zshsetup/raw/refs/heads/main/.zshrc >"$zshrc"; then
+  rm -f "$zshrc"
+  echo "Failed to download .zshrc" >&2
+  exit 1
+fi
+zsh "$zshrc" install
+status=$?
+rm -f "$zshrc"
+exit "$status"

@@ -24,7 +24,7 @@ latest_sysroot() {
   require_cmd jq || return 1
   local arch
   arch="$(uname -m | sed 's/^x86_64$/64/')"
-  curl_or_wget "https://api.anaconda.org/package/conda-forge/sysroot_linux-$arch/files" \
+  curl -fsSL "https://api.anaconda.org/package/conda-forge/sysroot_linux-$arch/files" \
     | jq -r '[.[] | select((.basename | endswith(".conda")) and .version != "9999")]
       | sort_by((.version | split(".") | map(tonumber)), .upload_time) | last
       | "\(.version) \(.basename)"'
@@ -46,7 +46,7 @@ install() {
   fi
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
-  curl_or_wget "https://conda.anaconda.org/conda-forge/$basename" "$tmpdir/sysroot.conda"
+  curl -fsSL "https://conda.anaconda.org/conda-forge/$basename" -o "$tmpdir/sysroot.conda"
   python3 -m zipfile -e "$tmpdir/sysroot.conda" "$tmpdir/conda"
   mkdir -p "$tmpdir/pkg"
   zstd -dc "$tmpdir"/conda/pkg-*.tar.zst | tar -xC "$tmpdir/pkg"

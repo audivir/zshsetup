@@ -41,7 +41,7 @@ install() {
   url="https://github.com/jqlang/jq/releases/download/$version/jq-$os-$arch"
   tmpfile=$(mktemp)
   trap 'rm -f "$tmpfile"' EXIT INT TERM
-  curl_or_wget "$url" "$tmpfile"
+  curl -fsSL "$url" -o "$tmpfile"
   chmod +x "$tmpfile"
   mv "$tmpfile" "$local_bin"
   trap - EXIT INT TERM

@@ -14,6 +14,47 @@ patch_glibc() {
   done
 }
 
+# micromamba's own run evals bash code with /bin/sh, so activate with posix code instead
+if [ "$1" = "run" ]; then
+  shift
+  flag=""
+  value=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -n | --name | -p | --prefix)
+        flag="$1"
+        value="$2"
+        shift 2
+        ;;
+      -n=* | --name=* | -p=* | --prefix=*)
+        flag="${1%%=*}"
+        value="${1#*=}"
+        shift
+        ;;
+      --)
+        shift
+        break
+        ;;
+      -*)
+        echo "micromamba run: $1 is not supported on musl" >&2
+        exit 1
+        ;;
+      *) break ;;
+    esac
+  done
+  if [ -z "$flag" ] && [ -n "${CONDA_PREFIX:-}" ]; then
+    flag="--prefix"
+    value="$CONDA_PREFIX"
+  fi
+  if [ -n "$flag" ]; then
+    activation="$("$micromamba" shell activate -s posix "$flag" "$value")" || exit 1
+  else
+    activation="$("$micromamba" shell activate -s posix)" || exit 1
+  fi
+  eval "$activation"
+  exec "$@"
+fi
+
 # patching hardlinked files would also change the package cache
 MAMBA_ALWAYS_COPY=true "$micromamba" "$@"
 exit_code=$?
