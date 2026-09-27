@@ -95,6 +95,8 @@ Set them already for the installation (e.g. `ZSHSETUP_CHOICE=manual sh`), the in
 them to `preinit.zsh` for later shells.
 
 - `ZSHSETUP_CHOICE`: default package manager (`brew`, `apt`, or `manual`) instead of the menu.
+- `ZSHSETUP_CHOICE_<PACKAGE>`: package manager for a single package (e.g. `ZSHSETUP_CHOICE_CURL=apt`),
+  overriding `ZSHSETUP_CHOICE`.
 - `ZSHSETUP_IGNORESCRATCH`: do not move the cache directory to `/scratch/$USER/.cache`.
   A `~/.cache/.zshsetup_do_not_use_scratch` file does the same.
 - `ZSHSETUP_REQUIRE_ZIG`: install zig even if no other package requires it (when set and non-empty).
@@ -106,5 +108,4 @@ them to `preinit.zsh` for later shells.
 
 ## License
 
-MIT, see `LICENSE`. `simple_term_menu.py` is vendored from
-[simple-term-menu](https://github.com/IngoMeyer441/simple-term-menu), which is also MIT licensed.
+MIT, see `LICENSE`.

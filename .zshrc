@@ -128,7 +128,7 @@ __init_zshsetup_env() {
   ZSH_THEME="robbyrussell"
 
   # SETUP PATH
-  PATH="$XDG_BIN_HOME:$HOME/bin:$PATH"
+  PATH="$ZSHSETUP_HOME/bin:$XDG_BIN_HOME:$HOME/bin:$PATH"
 
   # SETUP OTHER ENVIRONMENT
   export GNUPGHOME="$XDG_DATA_HOME/gnupg"
@@ -141,7 +141,8 @@ __init_zshsetup() {
   __init_cache || return 1
 
   local dir
-  for dir in "$LOCAL_HOME" "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_BIN_HOME" "$XDG_CACHE_HOME" "$XDG_STATE_HOME"; do
+  for dir in "$LOCAL_HOME" "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_BIN_HOME" "$XDG_CACHE_HOME" "$XDG_STATE_HOME" \
+    "$ZSHSETUP_HOME/bin" "$ZSHSETUP_HOME/versions"; do
     __assure_dir "$dir" || return 1
   done
 
@@ -241,8 +242,9 @@ __init_zshsetup() {
   alias sb="sudo bat --paging=never --style=plain --tabs=4"
   # END ALIASES
 
+  # zshsetup's own links (e.g. bat -> batcat) come first
   # typeset -U only deduplicates array assignments, not PATH="...:$PATH"
-  path=("${path[@]}")
+  path=("$ZSHSETUP_HOME/bin" "${path[@]}")
   export PATH
 
   # BEGIN THEME VIEWER
@@ -263,7 +265,8 @@ __save_settings() {
     printf '#!/usr/bin/env zsh\n# shellcheck shell=bash\n' >"$preinit" || return 1
     chmod +x "$preinit" || return 1
   fi
-  for var in ZSHSETUP_CHOICE ZSHSETUP_IGNORESCRATCH ZSHSETUP_REQUIRE_ZIG ZSHSETUP_REQUIRE_MICROMAMBA_ON_MUSL ZSHSETUP_RUST_TOOLCHAIN; do
+  for var in ZSHSETUP_CHOICE ${(k)parameters[(I)ZSHSETUP_CHOICE_*]} ZSHSETUP_IGNORESCRATCH ZSHSETUP_REQUIRE_ZIG \
+    ZSHSETUP_REQUIRE_MICROMAMBA_ON_MUSL ZSHSETUP_RUST_TOOLCHAIN; do
     if [ -n "${(P)var}" ]; then
       echo "export $var=${(q)${(P)var}}" >>"$preinit" || return 1
     fi

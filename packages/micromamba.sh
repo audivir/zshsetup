@@ -54,7 +54,6 @@ install() {
     cp "$ZSHSETUP_HOME/packages/musl/micromamba" "$local_bin"
     chmod +x "$local_bin"
   fi
-  mkdir -p "$(dirname "$version_file")"
   echo "$version" >"$version_file"
 }
 

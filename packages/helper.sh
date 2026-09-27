@@ -28,31 +28,62 @@ __available_cmd() {
 }
 
 # nested package installs reuse the outermost bootstrap, which removes it at the end
-__bootstrap_python3() {
-  local url dir rc
-  dir="${ZSHSETUP_BOOTSTRAP_PYTHON:-}"
-  if [ -n "$dir" ]; then
-    PATH="$dir/bin:$PATH" "$dir/bin/python3" "$@"
-    return
+# installs a package with the package manager from ZSHSETUP_CHOICE_<PACKAGE>, ZSHSETUP_CHOICE, or a menu
+# shellcheck disable=SC2206,SC2296,SC2299
+package_manager() {
+  local name brew apt choice choice_var postinstall
+  local -a options sudo apt_install
+  name="$1"
+  brew="$2"
+  apt="$3"
+  options=()
+  if [ "$(uname)" = "Darwin" ]; then
+    [ -n "$brew" ] && options+=(brew)
+  elif [ -n "$apt" ]; then
+    options+=(apt)
   fi
-  set_os_arch "unknown-linux-gnu" "x86_64" "unknown-linux-gnu" "aarch64" "apple-darwin" "aarch64" "unknown-linux-musl"
-  url="https://github.com/astral-sh/python-build-standalone/releases/download/20260924/cpython-3.12.14+20260924-$arch-$os-install_only_stripped.tar.gz"
-  dir="$(mktemp -d)"
-  if ! __bootstrap_download "$url" | tar -xzC "$dir"; then
-    rm -rf "$dir"
+  options+=(manual)
+
+  echo "Install $name via:" >&2
+  choice_var="ZSHSETUP_CHOICE_${${name:u}//-/_}"
+  choice="${(P)choice_var:-${ZSHSETUP_CHOICE:-}}"
+  if [ -n "$choice" ]; then
+    # an unavailable choice (e.g. apt on macOS) falls back to manual
+    ((${options[(Ie)$choice]})) || choice="manual"
+  elif { : </dev/tty; } 2>/dev/null; then
+    PS3="choice: "
+    select choice in "${options[@]}"; do
+      [ -n "$choice" ] && break
+    done </dev/tty >/dev/tty 2>&1
+  fi
+  if [ -z "$choice" ]; then
+    echo "No install choice for $name, set ZSHSETUP_CHOICE or $choice_var" >&2
     return 1
   fi
-  rc=0
-  ZSHSETUP_BOOTSTRAP_PYTHON="$dir/python" PATH="$dir/python/bin:$PATH" "$dir/python/bin/python3" "$@" || rc=$?
-  rm -rf "$dir"
-  return "$rc"
-}
+  echo "$choice" >&2
 
-package_manager() {
-  if ! __available_python3; then
-    __bootstrap_python3 "$ZSHSETUP_HOME/package_manager.py" "$@"
-  else
-    python3 "$ZSHSETUP_HOME/package_manager.py" "$@"
+  case "$choice" in
+    manual)
+      "$ZSHSETUP_HOME/packages/$name.sh" install || return 1
+      ;;
+    brew)
+      NONINTERACTIVE=1 brew install "$brew" || return 1
+      postinstall="$ZSHSETUP_HOME/packages/brew/$brew.sh"
+      ;;
+    apt)
+      sudo=()
+      [ "$(id -u)" -eq 0 ] || sudo=(sudo)
+      # apt may list several packages, e.g. "curl ca-certificates"
+      apt_install=("${sudo[@]}" apt-get install --no-install-recommends --yes ${=apt})
+      # fresh systems and containers have no package lists yet
+      if ! DEBIAN_FRONTEND=noninteractive "${apt_install[@]}"; then
+        "${sudo[@]}" apt-get update && DEBIAN_FRONTEND=noninteractive "${apt_install[@]}" || return 1
+      fi
+      postinstall="$ZSHSETUP_HOME/packages/apt/${apt%% *}.sh"
+      ;;
+  esac
+  if [ -n "${postinstall:-}" ] && [ -f "$postinstall" ]; then
+    "$postinstall" || return 1
   fi
 }
 

@@ -40,9 +40,9 @@ if ! ZSHSETUP_ZSH_ONLY=1 sh /zshsetup/install.sh >/tmp/install.log 2>&1; then
 fi
 echo "  ok    install.sh (zsh $(PATH="$HOME/.local/bin:$PATH" zsh --version | cut -d" " -f2))"
 export ZSHSETUP_HOME="$HOME/.config/zshsetup" XDG_BIN_HOME="$HOME/.local/bin" XDG_DATA_HOME="$HOME/.local/share"
-export ZSHSETUP_CHOICE=manual PATH="$HOME/.local/bin:$PATH"
-mkdir -p "$ZSHSETUP_HOME" "$XDG_BIN_HOME" "$XDG_DATA_HOME"
-cp -R /zshsetup/packages /zshsetup/package_manager.py /zshsetup/simple_term_menu.py "$ZSHSETUP_HOME/"
+export ZSHSETUP_CHOICE=manual PATH="$ZSHSETUP_HOME/bin:$HOME/.local/bin:$PATH"
+mkdir -p "$ZSHSETUP_HOME/bin" "$ZSHSETUP_HOME/versions" "$XDG_BIN_HOME" "$XDG_DATA_HOME"
+cp -R /zshsetup/packages "$ZSHSETUP_HOME/"
 failed=0
 for p in "$@"; do
   case "$p" in

@@ -22,11 +22,6 @@ fetch() {
 
 # installs the most recent version
 install() {
-  if [ -n "${ZSHSETUP_BOOTSTRAP_UV_DIR:-}" ] && [ -f "$ZSHSETUP_BOOTSTRAP_UV_DIR/uv" ]; then
-    mv "$ZSHSETUP_BOOTSTRAP_UV_DIR/uv" "$XDG_BIN_HOME/uv"
-    mv "$ZSHSETUP_BOOTSTRAP_UV_DIR/uvx" "$XDG_BIN_HOME/uvx"
-    return 0
-  fi
   local version url tmpdir
   version="$1"
   set_os_arch "unknown-linux-gnu" "x86_64" "unknown-linux-gnu" "aarch64" "apple-darwin" "aarch64" "unknown-linux-musl"
