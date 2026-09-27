@@ -3,7 +3,6 @@ bin = { uv = "uv", uvx = "uvx" }
 completions.uv.zsh.cmd = "uv generate-shell-completion zsh"
 completions.uv.bash.cmd = "uv generate-shell-completion bash"
 completions.uv.fish.cmd = "uv generate-shell-completion fish"
-check = {}
 
 [external]
 brew = "uv"

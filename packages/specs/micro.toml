@@ -1,8 +1,6 @@
 bin = { micro = "micro" }
 man = ["micro.1"]
 
-check = {}
-
 [external]
 brew = "micro"
 apt = "micro"

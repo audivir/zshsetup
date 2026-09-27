@@ -1,7 +1,5 @@
 bin = { jq = "{{ asset }}" }
 
-check = {}
-
 [external]
 brew = "jq"
 apt = "jq"

@@ -2,7 +2,6 @@
 # that also patches the glibc programs micromamba installs
 deps = ["glibc"]
 bin = { micromamba = "{{ asset }}" }
-check = {}
 post_install = '''{% if deps.glibc.dir %}
 mv "$PREFIX/bin/micromamba" "$PREFIX/dir/micromamba"
 glibc="{{ deps.glibc.dir }}"

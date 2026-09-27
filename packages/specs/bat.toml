@@ -4,7 +4,6 @@ man = ["bat.1"]
 completions.bat.zsh = "autocomplete/bat.zsh"
 completions.bat.bash = "autocomplete/bat.bash"
 completions.bat.fish = "autocomplete/bat.fish"
-check = {}
 
 [external]
 brew = "bat"

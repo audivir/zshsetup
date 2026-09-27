@@ -1,5 +1,4 @@
 deps = ["curl", "cc", "make"]
-check = { cmd = ["gawk", "--version"] }
 # zig ar lacks the u flag of the default ARFLAGS, and configure wants a linker in LD
 post_install = '''
 cd "$CONTENT"

@@ -1,5 +1,4 @@
 deps = ["cc", "make"]
-check = { cmd = ["zstd", "--version"] }
 post_install = '''
 make -C "$CONTENT/programs" -j4 zstd HAVE_ZLIB=0 HAVE_LZMA=0 HAVE_LZ4=0 >/dev/null
 cp "$CONTENT/programs/zstd" "$PREFIX/bin/zstd"

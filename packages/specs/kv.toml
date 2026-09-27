@@ -4,7 +4,6 @@ platforms = ["glibc_x64", "glibc_arm64", "musl_x64", "musl_arm64"]
 min_glibc = "2.39"
 platform_deps = { musl_x64 = ["musl"], musl_arm64 = ["musl"] }
 bin = { kv = "{{ asset }}" }
-check = {}
 post_install = '''
 {% if deps.musl.dir %}
 case "$(patchelf --print-interpreter "$PREFIX/bin/kv")" in

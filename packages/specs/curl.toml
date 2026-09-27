@@ -1,8 +1,6 @@
 # the static musl build runs on all Linux hosts, the glibc one crashes on older glibc
 bin = { curl = "curl" }
 
-check = {}
-
 [external]
 apt = "curl"
 apk = "curl"

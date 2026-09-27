@@ -5,7 +5,6 @@ post_install = """
 {% if deps["musl-libs"].dir %}
 patchelf --set-rpath '{{ deps["musl-libs"].dir }}/usr/lib' "$PREFIX/bin/bun"
 {% endif %}"""
-check = {}
 
 [external]
 brew = "oven-sh/bun/bun"
