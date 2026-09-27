@@ -10,7 +10,7 @@ __available() {
 __download() {
   url="$1"
   if command -v curl >/dev/null 2>&1; then
-    curl --fail-with-body -sSL "$url"
+    curl -fsSL "$url"
   elif command -v wget >/dev/null 2>&1; then
     wget -q -O - "$url"
   elif command -v python3 >/dev/null 2>&1; then
@@ -47,20 +47,25 @@ fi
 if ! __available zsh --help; then
   export PATH="$PATH:$HOME/.local/bin"
   if ! __available zsh --help; then
-    zsh_install="https://raw.githubusercontent.com/romkatv/zsh-bin/v6.1.1/install"
-    if __available curl --help || __available wget --help; then
-      __download "$zsh_install" | sh -s -- -d "$HOME/.local" -e "no" || exit 1
-    else
-      zsh_tmp="$(mktemp -d)"
+    zsh_tmp="$(mktemp -d)"
+    zsh_archive=""
+    # the zsh-bin installer only downloads with curl or wget, so otherwise hand it the archive
+    if ! __available curl --help && ! __available wget --help; then
+      zsh_archive="$zsh_tmp/zsh.tar.gz"
       zsh_platform="$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)"
-      if ! __download "https://github.com/romkatv/zsh-bin/releases/download/v6.1.1/zsh-5.8-$zsh_platform.tar.gz" >"$zsh_tmp/zsh.tar.gz" \
-        || ! __download "$zsh_install" >"$zsh_tmp/install" \
-        || ! sh "$zsh_tmp/install" -d "$HOME/.local" -e "no" -f "$zsh_tmp/zsh.tar.gz"; then
+      if ! __download "https://github.com/romkatv/zsh-bin/releases/download/v6.1.1/zsh-5.8-$zsh_platform.tar.gz" >"$zsh_archive"; then
         rm -rf "$zsh_tmp"
         exit 1
       fi
-      rm -rf "$zsh_tmp"
     fi
+    # runs the installer only when fully downloaded
+    if ! __download https://raw.githubusercontent.com/romkatv/zsh-bin/v6.1.1/install >"$zsh_tmp/install" \
+      || ! sh "$zsh_tmp/install" -d "$HOME/.local" -e "no" ${zsh_archive:+-f "$zsh_archive"}; then
+      rm -rf "$zsh_tmp"
+      echo "Failed to install zsh" >&2
+      exit 1
+    fi
+    rm -rf "$zsh_tmp"
   fi
 fi
 

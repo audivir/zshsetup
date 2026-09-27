@@ -13,3 +13,21 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: j178/prek-action@v3.0.0
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+      - run: ./tests/run_tests.sh
+        env:
+          ZSHSETUP_GH_TOKEN: ${{ github.token }}
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+      - run: ./tests/run_tests.sh --native env packages lifecycle
+        env:
+          ZSHSETUP_GH_TOKEN: ${{ github.token }}

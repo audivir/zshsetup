@@ -51,12 +51,21 @@ __require() {
   disable_var="ZSHSETUP_DISABLE_${${package:u}//-/_}"
   __available "$package" && return 0
   [ -n "${(P)disable_var}" ] && return 1
-  [ -n "$(find "$marker" -mtime -1 2>/dev/null)" ] && return 1
+  # the marker holds the time of the failure
+  local failed_at
+  zmodload zsh/datetime
+  if [ -f "$marker" ]; then
+    failed_at="$(<"$marker")"
+    case "$failed_at" in
+      "" | *[!0-9]*) failed_at=0 ;;
+    esac
+    ((EPOCHSECONDS - failed_at < 86400)) && return 1
+  fi
   if __package_manager "$package" && __available "$package"; then
     rm -f "$marker"
     return 0
   fi
-  mkdir -p "${marker%/*}" && touch "$marker"
+  mkdir -p "${marker%/*}" && echo "$EPOCHSECONDS" >"$marker"
   __eprint "zshsetup: installing $package failed, skipping it for a day (retry with install_manual $package)"
 }
 
@@ -93,7 +102,7 @@ or keep it with:
 
 # inits the environment before running any failable commands
 __init_zshsetup_env() {
-  export ZSHSETUP_REPO="https://github.com/audivir/zshsetup"
+  export ZSHSETUP_REPO="${ZSHSETUP_REPO:-https://github.com/audivir/zshsetup}"
   export ZSHSETUP_HOME="$HOME/.config/zshsetup"
 
   # SETUP XDG SPEC

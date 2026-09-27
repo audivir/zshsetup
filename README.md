@@ -18,7 +18,7 @@ On minimal environments lacking `sudo`, `curl`, and `wget`, `zshsetup` falls bac
 ## Installation
 
 ```bash
-(u="https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh" && if command -v curl >/dev/null 2>&1; then curl --fail-with-body -SL "$u"; elif command -v wget >/dev/null 2>&1; then wget -O - "$u"; elif command -v python3 >/dev/null 2>&1; then python3 -c 'import shutil, sys, urllib.request; res = urllib.request.urlopen(sys.argv[1]); shutil.copyfileobj(res, sys.stdout.buffer)' "$u"; elif [ -x /usr/lib/apt/apt-helper ]; then t=$(mktemp) && /usr/lib/apt/apt-helper -o Acquire::https::Verify-Peer=false download-file "$u" "$t" >/dev/null 2>&1 && cat "$t" && rm -f "$t"; fi) | sh
+(u="https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh" && if command -v curl >/dev/null 2>&1; then curl -fsSL "$u"; elif command -v wget >/dev/null 2>&1; then wget -O - "$u"; elif command -v python3 >/dev/null 2>&1; then python3 -c 'import shutil, sys, urllib.request; res = urllib.request.urlopen(sys.argv[1]); shutil.copyfileobj(res, sys.stdout.buffer)' "$u"; elif [ -x /usr/lib/apt/apt-helper ]; then t=$(mktemp) && /usr/lib/apt/apt-helper -o Acquire::https::Verify-Peer=false download-file "$u" "$t" >/dev/null 2>&1 && cat "$t" && rm -f "$t"; fi) | sh
 ```
 
 This clones the repo to `~/.config/zshsetup` and links `~/.zshrc` to its `.zshrc`.
@@ -35,7 +35,7 @@ fi
 To keep the `bash` history, convert it into the `zsh` history file:
 
 ```bash
-python3 <(curl --fail-with-body -L https://gist.githubusercontent.com/muendelezaji/c14722ab66b505a49861b8a74e52b274/raw/bash-to-zsh-hist.py) \
+python3 <(curl -fsSL https://gist.githubusercontent.com/muendelezaji/c14722ab66b505a49861b8a74e52b274/raw/bash-to-zsh-hist.py) \
     <~/.bash_history >>~/.config/zshsetup/zsh_history
 ```
 
@@ -111,6 +111,14 @@ them to `preinit.zsh` for later shells.
 - `ZSHSETUP_GH_TOKEN`: GitHub token for API requests, which are limited to 60 per hour without.
   It is not saved to `preinit.zsh`.
 - `ZSHSETUP_RUST_TOOLCHAIN`: default toolchain for a manual `rustup` install (`stable` if unset).
+
+## Testing
+
+`./tests/run_tests.sh` runs the scenarios in `tests/scenarios/` in fresh containers (Alpine,
+Debian, Ubuntu, Rocky Linux 8), or with `--native` on the current machine with a temporary `HOME`:
+`env` (settings and choices), `packages`, `choices` (apt), `lifecycle` (upgrade, uninstall),
+`shell` (a full installation from the working tree), and the slow `musl` (micromamba, Rust).
+Set `ZSHSETUP_GH_TOKEN` to avoid GitHub's API rate limit.
 
 ## License
 
