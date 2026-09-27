@@ -22,16 +22,25 @@ __available_cmd() {
   fi
 }
 
+# nested package installs reuse the outermost bootstrap, which removes it at the end
 __bootstrap_python3() {
-  local url python_tmpdir
+  local url dir rc
+  dir="${ZSHSETUP_BOOTSTRAP_PYTHON:-}"
+  if [ -n "$dir" ]; then
+    PATH="$dir/bin:$PATH" "$dir/bin/python3" "$@"
+    return
+  fi
   set_os_arch "unknown-linux-gnu" "x86_64" "unknown-linux-gnu" "aarch64" "apple-darwin" "aarch64" "unknown-linux-musl"
   url="https://github.com/astral-sh/python-build-standalone/releases/download/20260924/cpython-3.12.14+20260924-$arch-$os-install_only_stripped.tar.gz"
-  python_tmpdir=$(mktemp -d)
-  trap 'rm -rf "$python_tmpdir"' EXIT INT TERM
-  curl_or_wget "$url" | tar -xzC "$python_tmpdir"
-  PATH="$python_tmpdir/python/bin:$PATH" "$python_tmpdir/python/bin/python3" "$@"
-  rm -rf "$python_tmpdir"
-  trap - EXIT INT TERM
+  dir="$(mktemp -d)"
+  if ! curl_or_wget "$url" | tar -xzC "$dir"; then
+    rm -rf "$dir"
+    return 1
+  fi
+  rc=0
+  ZSHSETUP_BOOTSTRAP_PYTHON="$dir/python" PATH="$dir/python/bin:$PATH" "$dir/python/bin/python3" "$@" || rc=$?
+  rm -rf "$dir"
+  return "$rc"
 }
 
 package_manager() {
@@ -69,14 +78,17 @@ curl_or_wget() {
     else
       curl --fail-with-body -sSL "$url"
     fi
+    return
   elif command -v wget >/dev/null 2>&1; then
     if [ -n "$dest" ]; then
       wget -qO "$dest" "$url"
     else
       wget -qO - "$url"
     fi
-  elif command -v python3 >/dev/null 2>&1; then
-    python3 -c 'import os, shutil, sys, urllib.request
+    return
+  fi
+  # python3 needs CA certificates, so apt-helper is still tried after it fails
+  if command -v python3 >/dev/null 2>&1 && python3 -c 'import os, shutil, sys, urllib.request
 try:
     with urllib.request.urlopen(sys.argv[1]) as res:
         if len(sys.argv) > 2 and sys.argv[2]:
@@ -87,8 +99,10 @@ try:
 except Exception:
     if len(sys.argv) > 2 and sys.argv[2] and os.path.exists(sys.argv[2]):
         os.remove(sys.argv[2])
-    sys.exit(1)' "$url" "$dest"
-  elif [ -x "/usr/lib/apt/apt-helper" ]; then
+    raise SystemExit(1)' "$url" "$dest"; then
+    return 0
+  fi
+  if [ -x "/usr/lib/apt/apt-helper" ]; then
     local tmp
     tmp="${dest:-$(mktemp)}"
     if ! /usr/lib/apt/apt-helper -o Acquire::https::Verify-Peer=false download-file "$url" "$tmp" >/dev/null 2>&1; then
@@ -99,10 +113,17 @@ except Exception:
       cat "$tmp"
       rm -f "$tmp"
     fi
-  else
-    echo "curl, wget, python3, or apt-helper is required (needed by ${name:-package})" >&2
-    return 1
+    return 0
   fi
+  echo "Failed to download $url with curl, wget, python3, or apt-helper (needed by ${name:-package})" >&2
+  return 1
+}
+
+# echoes the sha256 of a file, or of stdin without an argument
+sha256() {
+  python3 -c 'import hashlib, sys
+with open(sys.argv[1], "rb") if len(sys.argv) > 1 else sys.stdin.buffer as f:
+    print(hashlib.file_digest(f, "sha256").hexdigest())' "$@"
 }
 
 get_latest_github() {

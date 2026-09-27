@@ -178,12 +178,15 @@ __init_zshsetup() {
   # END GAWK
   #
   # BEGIN MICROMAMBA
-  if ! __available micromamba; then
-    __package_manager micromamba || return 1
+  # micromamba and conda-forge packages need glibc
+  if [ ! -e /lib/ld-musl-x86_64.so.1 ] && [ ! -e /lib/ld-musl-aarch64.so.1 ]; then
+    if ! __available micromamba; then
+      __package_manager micromamba || return 1
+    fi
+    alias conda='micromamba'
+    __source command micromamba shell hook --shell zsh || return 1
+    export MAMBA_ROOT_PREFIX="$XDG_DATA_HOME/micromamba"
   fi
-  alias conda='micromamba'
-  __source command micromamba shell hook --shell zsh || return 1
-  export MAMBA_ROOT_PREFIX="$XDG_DATA_HOME/micromamba"
   # END MICROMAMBA
 
   # BEGIN GO

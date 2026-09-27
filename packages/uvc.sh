@@ -12,16 +12,15 @@ local_bin="$XDG_BIN_HOME/uvc"
 
 # checks the currently installed version, echoes "" if not installed
 check() {
-  2>/dev/null sha256sum "$local_bin" | awk '{print $1}' || echo ""
+  2>/dev/null sha256 "$local_bin" || echo ""
 }
 
 # fetches the latest version
 fetch() {
-  # TODO: where is sha256sum from?
-  require_cmd sha256sum || return 1
+  require_cmd python3 || return 1
   local url
   url="https://github.com/audivir/uvc/raw/refs/heads/main/uvc"
-  curl_or_wget "$url" | sha256sum | awk '{print $1}'
+  curl_or_wget "$url" | sha256
 }
 
 # installs the most recent version

@@ -53,23 +53,23 @@ python3 <(curl --fail-with-body -L https://gist.githubusercontent.com/muendeleza
 
 The following packages have bootstrap scripts in `packages/`:
 
-- `bat`: `cat` clone with syntax highlighting and Git integration (requires `curl`, `jq`, `tar`)
-- `bun`: Fast all-in-one JavaScript/TypeScript runtime and toolkit (requires `curl`, `jq`, `python3`)
-- `curl`: Command-line tool for transferring data with URLs (requires `python3`, `tar`)
-- `gawk`: GNU Awk text processing utility (requires `curl`, `make`, `tar`, and `cc` or `zig`)
-- `git`: Distributed version control system (requires `curl`, `jq`, `tar`)
-- `go`: The Go programming language toolchain (requires `curl`, `tar`)
-- `jq`: Command-line JSON processor (requires `curl`)
-- `kv`: Key-value storage CLI (requires `curl`, `jq`)
-- `make`: GNU Make build automation tool (requires `curl`, `tar`, and `cc` or `zig`)
-- `micro`: Modern terminal-based text editor (requires `curl`, `jq`, `tar`)
-- `micromamba`: Fast standalone conda package manager (requires `curl`, `jq`)
-- `oh-my-zsh`: Community-driven zsh configuration framework (requires `curl`, `git`, `zsh`)
+- `bat`: `cat` clone with syntax highlighting and Git integration (requires `jq`)
+- `bun`: Fast all-in-one JavaScript/TypeScript runtime and toolkit (requires `jq`, `python3`)
+- `curl`: Command-line tool for transferring data with URLs (requires `jq`, `python3`)
+- `gawk`: GNU Awk text processing utility (requires `make`, `zig`, `python3`)
+- `git`: Distributed version control system (requires `jq`)
+- `go`: The Go programming language toolchain
+- `jq`: Command-line JSON processor
+- `kv`: Key-value storage CLI (requires `jq`)
+- `make`: GNU Make build automation tool (requires `zig`)
+- `micro`: Modern terminal-based text editor (requires `jq`)
+- `micromamba`: Fast standalone conda package manager (requires `jq`)
+- `oh-my-zsh`: Community-driven zsh configuration framework (requires `git`, `zsh`)
 - `python3`: Python programming language interpreter (requires `uv`)
-- `rustup`: Rust toolchain installer (requires `curl`, `jq`)
-- `uv`: Fast Python package and project manager (requires `curl`, `jq`, `tar`)
-- `uvc`: Python command wrapper and cache tool (requires `curl`, `sha256sum`)
-- `zig`: Zig compiler and toolchain (requires `curl`, `tar`)
+- `rustup`: Rust toolchain installer (requires `jq`)
+- `uv`: Fast Python package and project manager (requires `jq`)
+- `uvc`: Python command wrapper and cache tool (requires `python3`)
+- `zig`: Zig compiler and toolchain (requires `python3`)
 
 ## Environment Variables
 
