@@ -1,0 +1,23 @@
+bin = { micro = "micro" }
+man = ["micro.1"]
+
+check = {}
+
+[external]
+brew = "micro"
+apt = "micro"
+apk = "micro"
+
+[release]
+type = "github"
+repo = "micro-editor/micro"
+
+[download]
+type = "github"
+
+[assets]
+glibc_x64 = "micro-{{ version }}-linux64-static.tar.gz"
+glibc_arm64 = "micro-{{ version }}-linux-arm64.tar.gz"
+musl_x64 = "micro-{{ version }}-linux64-static.tar.gz"
+musl_arm64 = "micro-{{ version }}-linux-arm64.tar.gz"
+macos_arm64 = "micro-{{ version }}-macos-arm64.tar.gz"

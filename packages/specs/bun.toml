@@ -1,0 +1,23 @@
+# bun links libstdc++ and libgcc_s, which bare musl hosts lack
+deps = ["musl-libs"]
+bin = { bun = "bun" }
+post_install = """{% if deps["musl-libs"].dir %}patchelf --set-rpath '{{ deps["musl-libs"].dir }}/usr/lib' "$PREFIX/bin/bun"{% endif %}"""
+
+check = {}
+
+[external]
+brew = "oven-sh/bun/bun"
+
+[release]
+type = "github"
+repo = "oven-sh/bun"
+
+[download]
+type = "github"
+
+[assets]
+glibc_x64 = "bun-linux-x64.zip"
+glibc_arm64 = "bun-linux-aarch64.zip"
+musl_x64 = "bun-linux-x64-musl.zip"
+musl_arm64 = "bun-linux-aarch64-musl.zip"
+macos_arm64 = "bun-darwin-aarch64.zip"

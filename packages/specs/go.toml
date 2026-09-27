@@ -1,0 +1,27 @@
+# GOPATH holds the module cache and the tools from go install, so it is not owned by go
+# the release and download commands use curl
+deps = ["curl"]
+dir = "{{ data }}/golang"
+content = true
+env = { GOROOT = "{{ dir }}", GOPATH = "{{ data }}/go" }
+paths = ["{{ dir }}/bin", "{{ data }}/go/bin"]
+check = { cmd = ["go", "version"] }
+
+[external]
+brew = "go"
+apt = "golang"
+
+[release]
+type = "command"
+cmd = "curl -fsSL 'https://go.dev/VERSION?m=text' | head -n 1"
+
+[download]
+type = "url"
+url = "https://go.dev/dl/{{ asset }}"
+
+[assets]
+glibc_x64 = "{{ tag }}.linux-amd64.tar.gz"
+glibc_arm64 = "{{ tag }}.linux-arm64.tar.gz"
+musl_x64 = "{{ tag }}.linux-amd64.tar.gz"
+musl_arm64 = "{{ tag }}.linux-arm64.tar.gz"
+macos_arm64 = "{{ tag }}.darwin-arm64.tar.gz"
