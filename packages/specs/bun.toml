@@ -1,8 +1,10 @@
 # bun links libstdc++ and libgcc_s, which bare musl hosts lack
 deps = ["musl-libs"]
 bin = { bun = "bun" }
-post_install = """{% if deps["musl-libs"].dir %}patchelf --set-rpath '{{ deps["musl-libs"].dir }}/usr/lib' "$PREFIX/bin/bun"{% endif %}"""
-
+post_install = """
+{% if deps["musl-libs"].dir %}
+patchelf --set-rpath '{{ deps["musl-libs"].dir }}/usr/lib' "$PREFIX/bin/bun"
+{% endif %}"""
 check = {}
 
 [external]

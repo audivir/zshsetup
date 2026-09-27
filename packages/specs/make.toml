@@ -1,0 +1,36 @@
+deps = ["curl", "cc"]
+check = { cmd = ["make", "--version"] }
+# zig ar lacks the u flag of the default ARFLAGS, and configure wants a linker in LD
+post_install = '''
+cd "$CONTENT"
+export ARFLAGS=cr LD=cc
+./configure --disable-nls --disable-dependency-tracking --without-guile >/dev/null
+sh build.sh >/dev/null
+cp make "$PREFIX/bin/make"
+'''
+
+[external]
+brew = "make"
+apt = "make"
+apk = "make"
+
+[release]
+type = "command"
+cmd = """
+curl -fsSL https://ftp.gnu.org/gnu/make/ |
+  grep -o 'make-[0-9.]*[.]tar.gz"' |
+  sed 's/^make-//; s/[.]tar.gz"$//' |
+  sort -t. -k1,1n -k2,2n -k3,3n |
+  tail -n 1
+"""
+
+[download]
+type = "url"
+url = "https://ftp.gnu.org/gnu/make/{{ asset }}"
+
+[assets]
+glibc_x64 = "make-{{ version }}.tar.gz"
+glibc_arm64 = "make-{{ version }}.tar.gz"
+musl_x64 = "make-{{ version }}.tar.gz"
+musl_arm64 = "make-{{ version }}.tar.gz"
+macos_arm64 = "make-{{ version }}.tar.gz"

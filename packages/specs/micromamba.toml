@@ -1,0 +1,32 @@
+# there is no musl build, so musl hosts run the glibc build with the glibc of pmg, through a wrapper
+# that also patches the glibc programs micromamba installs
+deps = ["glibc"]
+bin = { micromamba = "{{ asset }}" }
+check = {}
+post_install = '''{% if deps.glibc.dir %}
+mv "$PREFIX/bin/micromamba" "$PREFIX/dir/micromamba"
+glibc="{{ deps.glibc.dir }}"
+patchelf --set-interpreter "$glibc/loader" --add-rpath "$glibc/lib64:$glibc/usr/lib64" \
+  --force-rpath "$PREFIX/dir/micromamba"
+sed -e "s|@MICROMAMBA@|{{ dir }}/micromamba|" -e "s|@SYSROOT@|$glibc|" \
+  "{{ spec_dir }}/micromamba-musl" > "$PREFIX/bin/micromamba"
+chmod +x "$PREFIX/bin/micromamba"
+{% endif %}'''
+
+[external]
+brew = "micromamba"
+apt = "micromamba"
+
+[release]
+type = "github"
+repo = "mamba-org/micromamba-releases"
+
+[download]
+type = "github"
+
+[assets]
+glibc_x64 = "micromamba-linux-64"
+glibc_arm64 = "micromamba-linux-aarch64"
+musl_x64 = "micromamba-linux-64"
+musl_arm64 = "micromamba-linux-aarch64"
+macos_arm64 = "micromamba-osx-arm64"

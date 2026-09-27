@@ -1,0 +1,32 @@
+# the gnu build needs glibc 2.39; older glibc hosts get the musl build, which runs with the musl
+# loader of pmg unless the host has one
+platforms = ["glibc_x64", "glibc_arm64", "musl_x64", "musl_arm64"]
+min_glibc = "2.39"
+deps = ["musl"]
+bin = { kv = "{{ asset }}" }
+check = {}
+post_install = '''
+{% if deps.musl.dir %}
+case "$(patchelf --print-interpreter "$PREFIX/bin/kv")" in
+  */ld-musl-*)
+    loader="$(echo {{ deps.musl.dir }}/lib/ld-musl-*.so.1)"
+    patchelf --set-interpreter "$loader" "$PREFIX/bin/kv"
+    ;;
+esac
+{% endif %}'''
+
+[external]
+brew = "kv"
+
+[release]
+type = "github"
+repo = "audivir/kv"
+
+[download]
+type = "github"
+
+[assets]
+glibc_x64 = "kv-x86_64-unknown-linux-gnu"
+glibc_arm64 = "kv-aarch64-unknown-linux-gnu"
+musl_x64 = "kv-x86_64-unknown-linux-musl"
+musl_arm64 = "kv-aarch64-unknown-linux-musl"

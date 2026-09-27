@@ -1,0 +1,25 @@
+# uvc has no releases, so the tag is the start of the sha256 of the current script
+deps = ["curl", "uv", "python3>=3.11"]
+bin = { uvc = "{{ asset }}" }
+check = {}
+
+[external]
+brew = "uvc"
+
+[release]
+type = "command"
+cmd = '''
+curl -fsSL https://github.com/audivir/uvc/raw/refs/heads/main/uvc |
+  python3 -c 'import hashlib, sys; print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest()[:12])'
+'''
+
+[download]
+type = "url"
+url = "https://github.com/audivir/uvc/raw/refs/heads/main/{{ asset }}"
+
+[assets]
+glibc_x64 = "uvc"
+glibc_arm64 = "uvc"
+musl_x64 = "uvc"
+musl_arm64 = "uvc"
+macos_arm64 = "uvc"

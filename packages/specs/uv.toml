@@ -1,7 +1,8 @@
 min_glibc = "2.28"
 bin = { uv = "uv", uvx = "uvx" }
-completions.uv = { zsh = { cmd = "uv generate-shell-completion zsh" }, bash = { cmd = "uv generate-shell-completion bash" }, fish = { cmd = "uv generate-shell-completion fish" } }
-
+completions.uv.zsh.cmd = "uv generate-shell-completion zsh"
+completions.uv.bash.cmd = "uv generate-shell-completion bash"
+completions.uv.fish.cmd = "uv generate-shell-completion fish"
 check = {}
 
 [external]

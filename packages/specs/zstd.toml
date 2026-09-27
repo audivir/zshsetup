@@ -1,0 +1,25 @@
+deps = ["cc", "make"]
+check = { cmd = ["zstd", "--version"] }
+post_install = '''
+make -C "$CONTENT/programs" -j4 zstd HAVE_ZLIB=0 HAVE_LZMA=0 HAVE_LZ4=0 >/dev/null
+cp "$CONTENT/programs/zstd" "$PREFIX/bin/zstd"
+'''
+
+[external]
+brew = "zstd"
+apt = "zstd"
+apk = "zstd"
+
+[release]
+type = "github"
+repo = "facebook/zstd"
+
+[download]
+type = "github"
+
+[assets]
+glibc_x64 = "zstd-{{ version }}.tar.gz"
+glibc_arm64 = "zstd-{{ version }}.tar.gz"
+musl_x64 = "zstd-{{ version }}.tar.gz"
+musl_arm64 = "zstd-{{ version }}.tar.gz"
+macos_arm64 = "zstd-{{ version }}.tar.gz"

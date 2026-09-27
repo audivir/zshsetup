@@ -1,0 +1,41 @@
+# a C compiler through zig for hosts without one, for building from source and linking Rust
+deps = ["zig"]
+check = { cmd = ["cc", "--version"] }
+[external]
+apt = "gcc"
+apk = "gcc"
+
+[release]
+type = "static"
+tag = "1"
+
+[download]
+type = "command"
+# zig links against its newest glibc unless told the host's, and rejects a flag that rustc passes
+# on aarch64
+cmd = '''
+if [ "$(uname)" != Linux ]; then
+  target=""
+elif glibc="$(getconf GNU_LIBC_VERSION 2>/dev/null)"; then
+  target="-target $(uname -m)-linux-gnu.${glibc#glibc }"
+else
+  target="-target $(uname -m)-linux-musl"
+fi
+for tool in cc c++; do
+  cat > "$PREFIX/bin/$tool" <<EOF
+#!/bin/sh
+for arg do
+  shift
+  case "\$arg" in
+    -Wl,--fix-cortex-a53-843419) ;;
+    *) set -- "\$@" "\$arg" ;;
+  esac
+done
+exec zig $tool $target "\$@"
+EOF
+done
+for tool in ar ranlib; do
+  printf '#!/bin/sh\nexec zig %s "$@"\n' "$tool" > "$PREFIX/bin/$tool"
+done
+chmod +x "$PREFIX"/bin/*
+'''

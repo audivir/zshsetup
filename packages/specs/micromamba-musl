@@ -1,10 +1,10 @@
 #!/bin/sh
 # runs micromamba with a user-space glibc and patches newly installed glibc programs to use it
-# see packages/micromamba.sh, packages/glibc.sh, and packages/patchelf.sh
+# pmg fills in @MICROMAMBA@ and @SYSROOT@, see micromamba.toml
 data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
-micromamba="$data_home/micromamba-musl/micromamba"
-sysroot="$data_home/glibc"
-loader="$(echo "$sysroot"/lib64/ld-linux-*.so.*)"
+micromamba="@MICROMAMBA@"
+sysroot="@SYSROOT@"
+loader="$sysroot/loader"
 
 patch_glibc() {
   find "$@" -type f -perm -u+x 2>/dev/null | while IFS= read -r file; do

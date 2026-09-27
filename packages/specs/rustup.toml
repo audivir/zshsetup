@@ -1,7 +1,8 @@
 # rustup updates itself and its toolchains, so pmg owns the dirs rather than their files;
 # cargo install adds binaries to cargo/bin, which is why it is a PATH entry instead of links
-# the release and download commands use curl
-deps = ["curl"]
+
+# the release and download commands use curl, Rust links with cc, and on musl needs libgcc_s
+deps = ["curl", "cc", "musl-libs"]
 dirs = { cargo = "{{ data }}/cargo" }
 env = { RUSTUP_HOME = "{{ dir }}", CARGO_HOME = "{{ dirs.cargo }}" }
 paths = ["{{ dirs.cargo }}/bin"]
@@ -15,12 +16,16 @@ apt = "rustup"
 [release]
 type = "command"
 cmd = """
-curl -fsSL https://static.rust-lang.org/rustup/release-stable.toml \
-  | awk -F"'" '/^version/ {print $2}'"""
+curl -fsSL https://static.rust-lang.org/rustup/release-stable.toml |
+  awk -F"'" '/^version/ {print $2}'
+"""
 
 [download]
 type = "command"
 # the default profile without its offline docs, which take several hundred MB
-cmd = "curl -fsSL https://sh.rustup.rs | sh -s -- --default-toolchain stable --profile minimal --component rustfmt,clippy --no-update-default-toolchain --no-modify-path -y"
+cmd = '''
+curl -fsSL https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain stable \
+  --profile minimal --component rustfmt,clippy --no-update-default-toolchain
+'''
 
 [assets]
