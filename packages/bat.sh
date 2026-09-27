@@ -24,7 +24,7 @@ fetch() {
 install() {
   local version url
   version="$1"
-  set_os_arch "unknown-linux-gnu" "x86_64" "unknown-linux-gnu" "aarch64" "apple-darwin" "aarch64"
+  set_os_arch "unknown-linux-gnu" "x86_64" "unknown-linux-gnu" "aarch64" "apple-darwin" "aarch64" "unknown-linux-musl"
   url="https://github.com/sharkdp/bat/releases/download/$version/bat-$version-$arch-$os.tar.gz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM

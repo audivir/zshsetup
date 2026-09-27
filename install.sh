@@ -39,8 +39,8 @@ if [ "$(uname)" = "Darwin" ] && [ "$(uname -m)" != "arm64" ]; then
   exit 1
 fi
 
-if { ! __available curl --help && ! __available wget --help && [ ! -x /usr/lib/apt/apt-helper ] && ! __available python3 --version; } || ! __available git --help; then
-  echo "curl (or wget/apt-helper/python3) and git required!"
+if ! __available curl --help && ! __available wget --help && [ ! -x /usr/lib/apt/apt-helper ] && ! __available python3 --version; then
+  echo "curl (or wget/apt-helper/python3) required!"
   exit 1
 fi
 
@@ -50,6 +50,21 @@ if ! __available zsh --help; then
     __download https://raw.githubusercontent.com/romkatv/zsh-bin/master/install \
       | sh -s -- -d "$HOME/.local" -e "no" || exit 1
   fi
+fi
+
+# without git, installs it with the package script from a snapshot of the repo
+if ! __available git --version; then
+  snapshot="$(mktemp -d)"
+  mkdir -p "$HOME/.local/bin" "$HOME/.local/share"
+  if ! __download https://github.com/audivir/zshsetup/archive/refs/heads/main.tar.gz | tar -xzC "$snapshot" \
+    || ! ZSHSETUP_HOME="$snapshot/zshsetup-main" XDG_BIN_HOME="$HOME/.local/bin" XDG_DATA_HOME="$HOME/.local/share" \
+      zsh "$snapshot/zshsetup-main/packages/git.sh" package; then
+    rm -rf "$snapshot"
+    echo "Failed to install git" >&2
+    exit 1
+  fi
+  rm -rf "$snapshot"
+  export PATH="$HOME/.local/bin:$PATH"
 fi
 
 __download https://github.com/audivir/zshsetup/raw/refs/heads/main/.zshrc | zsh -s -- install

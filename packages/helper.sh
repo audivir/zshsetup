@@ -2,7 +2,7 @@
 # shellcheck shell=bash
 set -euo pipefail
 
-packages=(curl zig make gawk jq micromamba go rustup uv python3 uvc bun bat micro kv)
+packages=(curl git zig make gawk jq micromamba go rustup uv python3 uvc bun bat micro kv)
 
 __available_python3() {
   local py
@@ -10,7 +10,7 @@ __available_python3() {
   if [[ "$OSTYPE" == darwin* ]] && [ "$py" = "/usr/bin/python3" ] && ! /usr/bin/xcode-select -p >/dev/null 2>&1; then
     return 1
   fi
-  "$py" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' >/dev/null 2>&1
+  "$py" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 11, 4) else 1)' >/dev/null 2>&1
 }
 
 __available_cmd() {
@@ -24,7 +24,7 @@ __available_cmd() {
 
 __bootstrap_python3() {
   local url python_tmpdir
-  set_os_arch "unknown-linux-gnu" "x86_64" "unknown-linux-gnu" "aarch64" "apple-darwin" "aarch64"
+  set_os_arch "unknown-linux-gnu" "x86_64" "unknown-linux-gnu" "aarch64" "apple-darwin" "aarch64" "unknown-linux-musl"
   url="https://github.com/astral-sh/python-build-standalone/releases/download/20260924/cpython-3.12.14+20260924-$arch-$os-install_only_stripped.tar.gz"
   python_tmpdir=$(mktemp -d)
   trap 'rm -rf "$python_tmpdir"' EXIT INT TERM
@@ -119,14 +119,34 @@ get_latest_crate() {
   curl_or_wget "https://crates.io/api/v1/crates/$crate" | jq -r .crate.max_stable_version
 }
 
+# echoes the C library of the host: "musl" (e.g. Alpine), "gnu" (glibc), or "" (not Linux)
+__libc() {
+  [ "$(uname)" = "Linux" ] || return 0
+  # the musl loader is always there, ldd (whose musl banner exits non-zero) may be missing
+  if [ -e /lib/ld-musl-x86_64.so.1 ] || [ -e /lib/ld-musl-aarch64.so.1 ]; then
+    echo "musl"
+    return 0
+  fi
+  case "$(ldd --version 2>&1 || true)" in
+    *musl*) echo "musl" ;;
+    *) echo "gnu" ;;
+  esac
+}
+
+# sets $os and $arch to the download naming of the host
+# linux_musl_os replaces the Linux os on musl hosts, linux_musl_arch replaces the libc
+# suffix of the Linux arch (x86_64-glibc -> x86_64-musl); empty keeps the value
 set_os_arch() {
   local linux_amd_os linux_amd_arch linux_arm_os linux_arm_arch macos_arm_os macos_arm_arch
+  local linux_musl_os linux_musl_arch
   linux_amd_os="$1"
   linux_amd_arch="$2"
   linux_arm_os="$3"
   linux_arm_arch="$4"
   macos_arm_os="$5"
   macos_arm_arch="$6"
+  linux_musl_os="${7:-}"
+  linux_musl_arch="${8:-}"
   os="$(uname)"
   arch="$(uname -m)"
   if [ "$os" = "Linux" ]; then
@@ -139,6 +159,10 @@ set_os_arch() {
     else
       echo "Unsupported architecture: $arch" >&2
       return 1
+    fi
+    if [ "$(__libc)" = "musl" ]; then
+      [ -n "$linux_musl_os" ] && os="$linux_musl_os"
+      [ -n "$linux_musl_arch" ] && arch="${arch%%-*}-$linux_musl_arch"
     fi
   elif [ "$os" = "Darwin" ]; then
     if [ "$arch" = "arm64" ] || [ "$arch" = "aarch64" ]; then

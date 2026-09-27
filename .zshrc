@@ -289,7 +289,7 @@ update_zshsetup() {
   popd || true
 
   local packages
-  packages=(curl zig make gawk jq micromamba go rustup uv python3 uvc bun bat micro kv)
+  packages=(curl git zig make gawk jq micromamba go rustup uv python3 uvc bun bat micro kv)
   for p in "${packages[@]}"; do
     "$ZSHSETUP_HOME/packages/$p.sh" upgrade
   done

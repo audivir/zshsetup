@@ -8,8 +8,9 @@ tools are installed on shell start, either with Homebrew, APT, or a manual insta
 
 ## Prerequisites
 
-- macOS on arm64, or Linux on x86_64 or arm64
-- `curl` (or `wget`, `python3`, or `/usr/lib/apt/apt-helper` on Debian/Ubuntu), `git`, and `tar`
+- macOS on arm64, or Linux (glibc, or musl like Alpine) on x86_64 or arm64
+- `curl` (or `wget`, `python3`, or `/usr/lib/apt/apt-helper` on Debian/Ubuntu), `tar`, and CA certificates
+  (`git` is installed as a static binary if missing)
 - `zsh` (installed to `~/.local` with [zsh-bin](https://github.com/romkatv/zsh-bin) if missing)
 
 On minimal environments lacking `sudo`, `curl`, and `wget`, `zshsetup` falls back to system `python3` or `/usr/lib/apt/apt-helper` to automatically bootstrap a static `curl` binary into `~/.local/bin`.
@@ -56,6 +57,7 @@ The following packages have bootstrap scripts in `packages/`:
 - `bun`: Fast all-in-one JavaScript/TypeScript runtime and toolkit (requires `curl`, `jq`, `python3`)
 - `curl`: Command-line tool for transferring data with URLs (requires `python3`, `tar`)
 - `gawk`: GNU Awk text processing utility (requires `curl`, `make`, `tar`, and `cc` or `zig`)
+- `git`: Distributed version control system (requires `curl`, `jq`, `tar`)
 - `go`: The Go programming language toolchain (requires `curl`, `tar`)
 - `jq`: Command-line JSON processor (requires `curl`)
 - `kv`: Key-value storage CLI (requires `curl`, `jq`)

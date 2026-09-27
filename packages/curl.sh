@@ -29,7 +29,7 @@ install() {
   require_cmd python3 || return 1
   local version url tmpdir
   version="${1:-8.22.0}"
-  set_os_arch "linux" "x86_64-glibc" "linux" "aarch64-glibc" "macos" "arm64"
+  set_os_arch "linux" "x86_64-glibc" "linux" "aarch64-glibc" "macos" "arm64" "linux" "musl"
   url="https://github.com/stunnel/static-curl/releases/download/$version/curl-$os-$arch-$version.tar.xz"
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT INT TERM
