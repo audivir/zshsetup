@@ -10,18 +10,20 @@ rights.
 ## Prerequisites
 
 - macOS on arm64, or Linux (glibc, or musl like Alpine) on x86_64 or arm64
-- `curl` (or `wget`, `python3`, or `/usr/lib/apt/apt-helper` on Debian/Ubuntu) and `tar`
+- `uv`, `curl`, `wget`, `python3`, or `/usr/lib/apt/apt-helper` (Debian/Ubuntu), and `tar`
   (`git` is installed from prebuilt binaries if missing)
-- `zsh` (installed to `~/.local` with [zsh-bin](https://github.com/romkatv/zsh-bin) if missing)
+- `sha256sum` (GNU coreutils, BusyBox) or `shasum` (macOS), unless `uv` is in `PATH`
+- `zsh` (installed to `~/.local` with pmg from [zsh-bin](https://github.com/romkatv/zsh-bin) if missing)
 
-`packages/pmg` runs pmg with `uvx`, at the commit it pins. Without a `uv` in `PATH`, it downloads
-one into `~/.cache/zshsetup/uv` with any of the tools above and checks its SHA-256. uv brings the
+`install.sh` and `packages/pmg` run pmg with `uvx`, at the commit they pin. Without a `uv` in
+`PATH`, they download a fixed uv into `~/.cache/zshsetup/uv` with any of the tools above and check
+its SHA-256: the gnu build on glibc 2.28 or newer, else the static musl build. uv brings the
 Python for pmg, and pmg its own CA certificates, so no system certificates are needed.
 
 ## Installation
 
 ```bash
-(u="https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh" && if command -v curl >/dev/null 2>&1; then curl -fsSL "$u"; elif command -v wget >/dev/null 2>&1; then wget -O - "$u"; elif command -v python3 >/dev/null 2>&1; then python3 -c 'import shutil, sys, urllib.request; res = urllib.request.urlopen(sys.argv[1]); shutil.copyfileobj(res, sys.stdout.buffer)' "$u"; elif [ -x /usr/lib/apt/apt-helper ]; then t=$(mktemp) && /usr/lib/apt/apt-helper -o Acquire::https::Verify-Peer=false download-file "$u" "$t" >/dev/null 2>&1 && cat "$t" && rm -f "$t"; fi) | sh
+(u="https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh" && if command -v uv >/dev/null 2>&1; then uv run --quiet --no-project --with certifi python -c 'import certifi, shutil, ssl, sys, urllib.request; res = urllib.request.urlopen(sys.argv[1], context=ssl.create_default_context(cafile=certifi.where())); shutil.copyfileobj(res, sys.stdout.buffer)' "$u"; elif command -v curl >/dev/null 2>&1; then curl -fsSL "$u"; elif command -v wget >/dev/null 2>&1; then wget -O - "$u"; elif command -v python3 >/dev/null 2>&1; then python3 -c 'import shutil, sys, urllib.request; res = urllib.request.urlopen(sys.argv[1]); shutil.copyfileobj(res, sys.stdout.buffer)' "$u"; elif [ -x /usr/lib/apt/apt-helper ]; then t=$(mktemp) && /usr/lib/apt/apt-helper -o Acquire::https::Verify-Peer=false download-file "$u" "$t" >/dev/null 2>&1 && cat "$t" && rm -f "$t"; fi) | sh
 ```
 
 This clones the repo to `~/.config/zshsetup` and links `~/.zshrc` to its `.zshrc`.
@@ -63,7 +65,7 @@ dependencies of installed packages are installed either way.
 The specs of pmg for `bat`, `kv`, `micro`, and `uvc` are in `packages/specs/`, all others in
 [pmg-specs](https://github.com/audivir/pmg-specs): `bun`, `cc` (a C compiler through zig), `curl`,
 `gawk`, `git`, `glibc`, `go`, `jq`, `make`, `micromamba`, `musl`, `musl-libs`, `patchelf`,
-`rustup`, `uv`, `zig`, and `zstd`. pmg installs dependencies like `cc` for `rustup` or `musl-libs`
+`rustup`, `uv`, `zig`, `zsh`, and `zstd`. pmg installs dependencies like `cc` for `rustup` or `musl-libs`
 for `bun` on musl, and skips those the system already has.
 
 ## Platform Notes

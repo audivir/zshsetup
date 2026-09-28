@@ -285,6 +285,8 @@ __init_zshsetup() {
   fi
   # BEGIN PYTHON
   __require uv
+  # a uv in PATH replaces the one packages/pmg bootstrapped for itself
+  __available uv && rm -rf "$XDG_CACHE_HOME/zshsetup/uv"
   if __require uvc; then
     __source command uvc shell zsh
   fi
