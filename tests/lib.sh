@@ -64,8 +64,8 @@ setup_env() {
 # copies the working tree to $1 (the files an install clones)
 copy_tree() {
   mkdir -p "$1"
-  (cd "$REPO" && tar -cf - .gitignore .zshrc install.sh custom_functions.sh theme_viewer.sh completions packages) |
-    tar -xf - -C "$1"
+  (cd "$REPO" && tar -cf - .gitignore .zshrc install.sh custom_functions.sh theme_viewer.sh completions packages) \
+    | tar -xf - -C "$1"
 }
 
 # sets up ZSHSETUP_HOME from the working tree, for running pmg directly
