@@ -8,15 +8,19 @@ export ZSHSETUP_CHOICE=manual
 apt_installed() { dpkg -s "$1" 2>/dev/null | grep -q 'ok installed'; }
 # __package_manager of .zshrc with the functions it calls
 functions="$(zshrc_function __eprint)
-$(zshrc_function __available)
+$(install_functions)
 $(zshrc_function __package_manager)"
+# shellcheck disable=SC2329
+apt_lists() { find /var/lib/apt/lists -maxdepth 1 -type f ! -name lock | head -n 1; }
 
 # curl from apt brings its certificates, and nothing lands in ~/.local/bin
+check "the image has no apt lists" test -z "$(apt_lists)"
 check "curl installs with ZSHSETUP_CHOICE_CURL=apt" env ZSHSETUP_CHOICE_CURL=apt zsh -c "$functions
-__package_manager curl"
+__package_manager curl && __apt_cleanup"
 check "curl comes from apt" apt_installed curl
 check "ca-certificates come with curl from apt" apt_installed ca-certificates
 check "no pmg curl in \$XDG_BIN_HOME" test ! -e "$XDG_BIN_HOME/curl"
+check "the apt lists downloaded for curl are removed" test -z "$(apt_lists)"
 
 # Debian and Ubuntu name bat batcat, the postinstall links it in zshsetup's bin
 check "bat installs with ZSHSETUP_CHOICE_BAT=apt" env ZSHSETUP_CHOICE_BAT=apt zsh -c "$functions

@@ -40,7 +40,7 @@ __assure_dir() {
 # shellcheck disable=SC2206,SC2296,SC2299
 __package_manager() {
   local package choice choice_var manager name postinstall
-  local -a options sudo
+  local -a options
   local -A names
   package="$1"
   while read -r manager name; do
@@ -73,31 +73,14 @@ __package_manager() {
   fi
   echo "$choice" >&2
 
-  sudo=()
-  [ "$(id -u)" -eq 0 ] || sudo=(sudo)
-  case "$choice" in
-    manual)
-      pmg install "$package" || return 1
-      ;;
-    brew)
-      NONINTERACTIVE=1 brew install "${names[brew]}" || return 1
-      ;;
-    apt)
-      # fresh systems and containers have no package lists yet
-      # a spec may list several apt packages, e.g. "curl ca-certificates"
-      # shellcheck disable=SC2086
-      if ! DEBIAN_FRONTEND=noninteractive "${sudo[@]}" apt-get install --no-install-recommends --yes ${=names[apt]}; then
-        "${sudo[@]}" apt-get update \
-          && DEBIAN_FRONTEND=noninteractive "${sudo[@]}" apt-get install --no-install-recommends --yes ${=names[apt]} \
-          || return 1
-      fi
-      postinstall="$ZSHSETUP_HOME/packages/apt/${names[apt]%% *}.sh"
-      ;;
-    apk)
-      # shellcheck disable=SC2086
-      "${sudo[@]}" apk add ${=names[apk]} || return 1
-      ;;
-  esac
+  if [ "$choice" = manual ]; then
+    pmg install "$package" || return 1
+  else
+    # a spec may list several packages, e.g. "curl ca-certificates"
+    # shellcheck disable=SC2086
+    __system_install "$choice" ${=names[$choice]} || return 1
+  fi
+  [ "$choice" = apt ] && postinstall="$ZSHSETUP_HOME/packages/apt/${names[apt]%% *}.sh"
   if [ -n "$postinstall" ] && [ -f "$postinstall" ]; then
     "$postinstall" || return 1
   fi
@@ -152,16 +135,6 @@ __source() {
   local env
   env=$("$@") || return 1
   eval "$env"
-}
-
-# looks up the executable without running it, ignoring functions and aliases
-__available() {
-  local cmd_path
-  cmd_path="$(whence -p "$1")" || return 1
-  # macOS's stubs in /usr/bin (git, make, cc, ...) only offer to install the missing developer tools
-  if [[ "$OSTYPE" == darwin* ]] && [[ "$cmd_path" -ef /usr/bin/cc ]] && ! /usr/bin/xcode-select -p &>/dev/null; then
-    return 1
-  fi
 }
 
 __init_cache() {
@@ -242,6 +215,9 @@ __init_zshsetup_env() {
 
 # runs the setup functions
 __init_zshsetup() {
+  # __available, __system_install, and the other functions shared with install.sh and packages/pmg
+  # shellcheck disable=SC2016
+  ZSHSETUP_INSTALL_LIB=1 emulate sh -c '. "$ZSHSETUP_HOME/install.sh"' || return 1
   __init_cache || return 1
 
   local dir
@@ -367,6 +343,9 @@ __init_zshsetup() {
   __require micro
   __require kv
   # END EXTRA TOOLS
+
+  # the apt lists that installs downloaded onto a system without them
+  __apt_cleanup
 
   # BEGIN ALIASES
   alias b="bat --paging=never --style=plain --tabs=4"
@@ -542,5 +521,8 @@ fi
 . "$ZSHSETUP_HOME/postinit.zsh" || return 1
 
 # CLEANUP
-unfunction __assure_link __assure_dir __package_manager __last_match __pmg_installed __require __source __available
+unfunction __assure_link __assure_dir __package_manager __last_match __pmg_installed __require __source
 unfunction __init_cache __init_zshsetup_env __init_zshsetup __install_zshsetup __save_settings
+unfunction __which __available __download __uv_libc __bootstrap_uv __apt_lists __system_install __apt_cleanup
+unfunction __install_chosen __install_main
+unset __PMG_TAG __APT_LISTS_CREATED

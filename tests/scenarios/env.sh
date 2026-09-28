@@ -15,7 +15,7 @@ EOF
 chmod +x "$fake/pmg"
 choose() { # env assignments, then runs __package_manager of .zshrc for fake-pkg
   env PATH="$fake:$PATH" "$@" zsh -c "$(zshrc_function __eprint)
-$(zshrc_function __available)
+$(install_functions)
 $(zshrc_function __package_manager)
 __package_manager fake-pkg" </dev/null 2>&1
 }
@@ -69,6 +69,22 @@ __init_cache" 2>&1
   check "an existing \$HOME/.cache stops with instructions" contains "$out" "zshsetup stopped: /scratch exists"
 else
   echo "  skip  /scratch tests (cannot create /scratch)"
+fi
+
+# install.sh installs git and uv with the chosen system package manager
+# shellcheck disable=SC2329
+chosen() { # package, names, then env assignments
+  package="$1" names="$2"
+  shift 2
+  env ZSHSETUP_INSTALL_LIB=1 "$@" sh -c ". '$REPO/install.sh' && __install_chosen '$package' '$names'"
+}
+# shellcheck disable=SC2329
+not_chosen() { ! chosen "$@"; }
+check "install.sh leaves ZSHSETUP_CHOICE=manual to pmg" not_chosen git 'apk git' ZSHSETUP_CHOICE=manual
+check "install.sh leaves a package without a name for the choice to pmg" not_chosen uv 'apk uv' ZSHSETUP_CHOICE=apt
+if command -v apk >/dev/null 2>&1; then
+  check "ZSHSETUP_CHOICE_TREE=apk installs tree with apk" chosen tree 'apk tree' ZSHSETUP_CHOICE_TREE=apk
+  check "apk keeps no index" test -z "$(ls -A /var/cache/apk 2>/dev/null)"
 fi
 
 finish

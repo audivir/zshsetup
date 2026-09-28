@@ -76,6 +76,11 @@ setup_zshsetup() {
   ln -s "$ZSHSETUP_HOME/packages/pmg" "$ZSHSETUP_HOME/bin/pmg"
 }
 
+# prints the zsh code defining the functions of install.sh, as .zshrc sources them
+install_functions() {
+  printf "ZSHSETUP_INSTALL_LIB=1 emulate sh -c '. %s/install.sh'\n" "$REPO"
+}
+
 # prints a zsh function from .zshrc, to test it on its own
 zshrc_function() {
   sed -n "/^$1() {/,/^}/p" "$REPO/.zshrc"
