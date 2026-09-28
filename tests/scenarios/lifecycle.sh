@@ -5,6 +5,12 @@ setup_zshsetup
 
 for p in bat micro uv git; do
   check "$p installs" pmg install "$p"
+  # e.g. git of the macOS developer tools is found instead, which pmg only records
+  if pmg list | grep -q "^$p@external "; then
+    echo "  info  $p is external"
+    check "$p uninstalls" pmg uninstall "$p"
+    continue
+  fi
   out="$(pmg upgrade "$p" 2>&1)"
   check "$p upgrade keeps the current version" contains "$out" "is up to date"
   check "$p uninstalls" pmg uninstall "$p"

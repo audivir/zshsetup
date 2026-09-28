@@ -56,7 +56,8 @@ setup_env() {
   fi
   export ZSHSETUP_HOME="$HOME/.config/zshsetup" XDG_BIN_HOME="$HOME/.local/bin"
   export XDG_DATA_HOME="$HOME/.local/share" XDG_CACHE_HOME="$HOME/.cache"
-  export PATH="$ZSHSETUP_HOME/bin:$XDG_BIN_HOME:$PATH"
+  # only the system dirs, so the tools of the machine running the tests are not found
+  export PATH="$ZSHSETUP_HOME/bin:$XDG_BIN_HOME:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
   mkdir -p "$XDG_BIN_HOME" "$XDG_DATA_HOME"
 }
 
