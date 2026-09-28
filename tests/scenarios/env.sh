@@ -71,6 +71,18 @@ else
   echo "  skip  /scratch tests (cannot create /scratch)"
 fi
 
+# the version checks with which packages/pmg keeps an installed pmg
+# shellcheck disable=SC2329
+at_least() { env ZSHSETUP_INSTALL_LIB=1 sh -c ". '$REPO/install.sh' && __version_at_least '$1' '$2'"; }
+# shellcheck disable=SC2329
+not_at_least() { ! at_least "$@"; }
+check "v1.10.0 is at least v1.9.2" at_least v1.10.0 v1.9.2
+check "v1.4.0 is at least v1.4.0" at_least v1.4.0 v1.4.0
+check "v1.4 is at least v1.4.0" at_least v1.4 v1.4.0
+check "v1.3.9 is not at least v1.4.0" not_at_least v1.3.9 v1.4.0
+check "the URL of an older install is not at least a tag" not_at_least https://example.com/v9.tar.gz v1.4.0
+check "no install is not at least a tag" not_at_least "" v1.4.0
+
 # install.sh installs git and uv with the chosen system package manager
 # shellcheck disable=SC2329
 chosen() { # package, names, then env assignments

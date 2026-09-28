@@ -15,9 +15,11 @@ rights.
 - `sha256sum` (GNU coreutils, BusyBox) or `shasum` (macOS), unless `uv` is in `PATH`
 - `zsh` (installed to `~/.local` with pmg from [zsh-bin](https://github.com/romkatv/zsh-bin) if missing)
 
-`install.sh` runs pmg with `uvx`, at the tag `packages/pmg` pins. `packages/pmg` installs that tag
-once into its own venv in `~/.local/share/zshsetup/pmg` and runs it from there, reinstalling it
-when the pin changes. Without a `uv` in `PATH`, both download a fixed uv into `~/.cache/zshsetup/uv` with any of the tools above and check
+`install.sh` names the oldest tag of pmg that zshsetup works with, and runs pmg at that tag with
+`uvx`. `packages/pmg` installs the latest tag once into its own venv in
+`~/.local/share/zshsetup/pmg` and runs it from there. It installs the latest tag again when the
+installed one is older than that minimum, and with `pmg self-upgrade`, which `update_zshsetup`
+runs, so a new release of pmg needs no change here. Without a `uv` in `PATH`, both download a fixed uv into `~/.cache/zshsetup/uv` with any of the tools above and check
 its SHA-256: the gnu build on glibc 2.28 or newer, else the static musl build. uv brings the
 Python for pmg, and pmg its own CA certificates, so no system certificates are needed.
 
@@ -64,8 +66,8 @@ python3 <(curl -fsSL https://gist.githubusercontent.com/muendelezaji/c14722ab66b
 
 ## Usage
 
-- `update_zshsetup` pulls the latest version, updates the specs of pmg, upgrades the packages of
-  pmg, and updates oh-my-zsh.
+- `update_zshsetup` pulls the latest version, upgrades pmg to its latest tag, updates the specs of
+  pmg, upgrades the packages of pmg, and updates oh-my-zsh.
 - `install_manual <package>...` installs packages with pmg, `uninstall_manual <package>...` removes
   them.
 - `pmg` is in `PATH` with completions, e.g. `pmg list`, `pmg use bat@v0.25.0`, or `pmg --help`.
@@ -124,7 +126,7 @@ them to `preinit.zsh` for later shells.
   without. It is not saved to `preinit.zsh`.
 - `PMG_RUST_TOOLCHAIN`: default toolchain for the `rustup` install of pmg (`stable` if unset).
 - `PMG_SPECS_DIR`: specs of pmg to use instead of `packages/specs/`.
-- `ZSHSETUP_PMG`: pmg to install instead of the pinned tag, as `uv pip install` takes it; a local
+- `ZSHSETUP_PMG`: pmg to install instead of its tags, as `uv pip install` takes it; a local
   checkout is installed editable.
 
 ## Testing

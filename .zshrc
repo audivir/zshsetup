@@ -437,6 +437,8 @@ update_zshsetup() {
 __upgrade_zshsetup() {
   rm -rf "$ZSHSETUP_HOME/failed"
 
+  # pmg itself to its latest tag, see packages/pmg
+  pmg self-upgrade || __eprint "Failed to upgrade pmg"
   pmg update || __eprint "Failed to update the specs of pmg"
   pmg upgrade || __eprint "Failed to upgrade the packages of pmg"
 

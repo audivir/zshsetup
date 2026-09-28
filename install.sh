@@ -4,8 +4,44 @@
 # with ZSHSETUP_INSTALL_LIB set, sourcing it only defines the functions .zshrc and packages/pmg
 # share; zsh sources it with emulate sh, so they keep the semantics of sh
 
-# the tag of pmg that install.sh runs and packages/pmg installs
+# the oldest tag of pmg zshsetup works with, which install.sh runs; packages/pmg installs the
+# latest tag and keeps an installed one while it is not older
 __PMG_TAG="v1.4.0"
+__PMG_REPO="https://github.com/audivir/pmg"
+
+# checks whether the version of the tag $1 is at least that of $2, e.g. v1.10.0 and v1.9.2; in the
+# shell, as packages/pmg checks it on every call
+__version_at_least() {
+  local a b x y
+  a="${1#v}"
+  b="${2#v}"
+  while [ -n "$a$b" ]; do
+    x="${a%%.*}"
+    y="${b%%.*}"
+    case "${x:-0}${y:-0}" in
+      *[!0-9]*) return 1 ;;
+    esac
+    [ "${x:-0}" -gt "${y:-0}" ] && return 0
+    [ "${x:-0}" -lt "${y:-0}" ] && return 1
+    case "$a" in *.*) a="${a#*.}" ;; *) a="" ;; esac
+    case "$b" in *.*) b="${b#*.}" ;; *) b="" ;; esac
+  done
+}
+
+# prints the latest vX.Y.Z tag of pmg, with git, which every zshsetup has, and no API limit
+__latest_pmg_tag() {
+  local tag latest
+  latest=""
+  for tag in $(git ls-remote --tags --refs "$__PMG_REPO" 'v*' 2>/dev/null | sed 's|.*refs/tags/||'); do
+    case "$tag" in
+      v*[!0-9.]* | v | v.* | *..* | *.) continue ;;
+    esac
+    if [ -z "$latest" ] || __version_at_least "$tag" "$latest"; then
+      latest="$tag"
+    fi
+  done
+  [ -n "$latest" ] && echo "$latest"
+}
 
 # prints the path of an executable in PATH without running it, ignoring functions and aliases
 __which() {
@@ -235,11 +271,11 @@ __install_main() {
     fi
   fi
 
-  # pmg at its tag, into the directories .zshrc uses; uv checks certificates with its own, so the
-  # system needs none
+  # pmg at its minimum tag, as git may be missing to find the latest, into the directories .zshrc
+  # uses; uv checks certificates with its own, so the system needs none
   pmg() {
     XDG_BIN_HOME="$HOME/.local/bin" XDG_DATA_HOME="$HOME/.local/share" \
-      "$uv" tool run --quiet --from "${ZSHSETUP_PMG:-https://github.com/audivir/pmg/archive/refs/tags/$__PMG_TAG.tar.gz}" \
+      "$uv" tool run --quiet --from "${ZSHSETUP_PMG:-$__PMG_REPO/archive/refs/tags/$__PMG_TAG.tar.gz}" \
       python -m pmg "$@"
   }
 

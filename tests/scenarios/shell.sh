@@ -31,6 +31,14 @@ done
 check "ZSHSETUP_REQUIRE_PATCHELF installs patchelf" test -e "$XDG_BIN_HOME/patchelf"
 check "ZSHSETUP_DISABLE_BUN skips bun" test ! -e "$XDG_BIN_HOME/bun"
 check "the pmg command is linked" test -L "$home/bin/pmg"
+source_file="$XDG_DATA_HOME/zshsetup/pmg/.source"
+# shellcheck disable=SC2016
+check "pmg is installed at a tag not older than the minimum" env ZSHSETUP_INSTALL_LIB=1 \
+  sh -c ". '$home/install.sh' && __version_at_least \"\$(cat '$source_file')\" \"\$__PMG_TAG\""
+echo v1.0.0 >"$source_file"
+check "pmg reinstalls a tag older than the minimum" "$home/bin/pmg" version
+check "the reinstalled tag is newer" test "$(cat "$source_file")" != v1.0.0
+check "pmg self-upgrade keeps the latest tag" contains "$("$home/bin/pmg" self-upgrade 2>&1)" "is the latest"
 check "pmg runs from its own venv" test -x "$XDG_DATA_HOME/zshsetup/pmg/bin/python"
 check "the completion of pmg is where zsh finds it" test -f "$XDG_DATA_HOME/zsh/site-functions/_pmg"
 check "the uv bootstrapped for pmg is gone once uv is installed" test ! -e "$XDG_CACHE_HOME/zshsetup/uv"

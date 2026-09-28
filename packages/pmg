@@ -1,23 +1,43 @@
 #!/bin/sh
-# runs pmg from its own venv, which it installs with the uv from PATH or one bootstrapped into
-# the cache, and reinstalls when the pinned source changes
+# runs pmg from its own venv; installs the latest tag of pmg when the venv has none, or one older
+# than the minimum of install.sh, and `pmg self-upgrade` (see update_zshsetup) moves it to the
+# latest tag; ZSHSETUP_PMG replaces the tags, e.g. with a local checkout, which is installed editable
 set -eu
 
 zshsetup_home="${ZSHSETUP_HOME:-$HOME/.config/zshsetup}"
-# the tag of pmg and the bootstrap of uv
+# the minimum tag of pmg, the version checks, and the bootstrap of uv
 # shellcheck source=install.sh
 ZSHSETUP_INSTALL_LIB=1 . "$zshsetup_home/install.sh"
-# the archive of a fixed tag, as uv would need git for a git URL; ZSHSETUP_PMG replaces it, e.g.
-# with a local checkout, which is installed editable
-pmg="${ZSHSETUP_PMG:-https://github.com/audivir/pmg/archive/refs/tags/$__PMG_TAG.tar.gz}"
 venv="${XDG_DATA_HOME:-$HOME/.local/share}/zshsetup/pmg"
+installed="$(cat "$venv/.source" 2>/dev/null || true)"
 
 export PMG_SPECS_DIR="${PMG_SPECS_DIR:-$zshsetup_home/packages/specs}"
 
-# the fast path: the venv has the pinned source, and its python still exists
-# python -m pmg, as the pmg script of uv needs a realpath with --, which BusyBox (Alpine) lacks
-if [ -x "$venv/bin/python" ] && [ "$(cat "$venv/.source" 2>/dev/null)" = "$pmg" ]; then
-  exec "$venv/bin/python" -m pmg "$@"
+# the fast path: the venv has ZSHSETUP_PMG, or a tag not older than the minimum, and its python
+# still exists; python -m pmg, as the pmg script of uv needs a realpath with --, which BusyBox
+# (Alpine) lacks
+if [ "${1:-}" != self-upgrade ] && [ -x "$venv/bin/python" ]; then
+  if [ -n "${ZSHSETUP_PMG:-}" ]; then
+    [ "$installed" = "$ZSHSETUP_PMG" ] && exec "$venv/bin/python" -m pmg "$@"
+  elif __version_at_least "$installed" "$__PMG_TAG"; then
+    exec "$venv/bin/python" -m pmg "$@"
+  fi
+fi
+
+# the source to install: ZSHSETUP_PMG, or the archive of the latest tag, as uv would need git for
+# a git URL; the minimum tag if git cannot tell
+if [ -n "${ZSHSETUP_PMG:-}" ]; then
+  source="$ZSHSETUP_PMG"
+  spec="$ZSHSETUP_PMG"
+else
+  source="$(__latest_pmg_tag || true)"
+  __version_at_least "$source" "$__PMG_TAG" || source="$__PMG_TAG"
+  spec="$__PMG_REPO/archive/refs/tags/$source.tar.gz"
+fi
+
+if [ "${1:-}" = self-upgrade ] && [ -x "$venv/bin/python" ] && [ "$installed" = "$source" ]; then
+  echo "pmg $source is the latest" >&2
+  exit 0
 fi
 
 uv="$(__which uv || true)"
@@ -30,10 +50,15 @@ fi
 # a Python of uv, as the one of the system may be too old or change with its upgrades; the source
 # is written last, so an interrupted install is redone
 "$uv" venv --quiet --clear --managed-python --python 3.13 "$venv"
-if [ -d "$pmg" ]; then
-  "$uv" pip install --quiet --python "$venv/bin/python" --editable "$pmg"
+if [ -d "$spec" ]; then
+  "$uv" pip install --quiet --python "$venv/bin/python" --editable "$spec"
 else
-  "$uv" pip install --quiet --python "$venv/bin/python" "$pmg"
+  "$uv" pip install --quiet --python "$venv/bin/python" "$spec"
 fi
-printf '%s\n' "$pmg" >"$venv/.source"
+printf '%s\n' "$source" >"$venv/.source"
+
+if [ "${1:-}" = self-upgrade ]; then
+  echo "installed pmg $source" >&2
+  exit 0
+fi
 exec "$venv/bin/python" -m pmg "$@"
