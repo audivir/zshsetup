@@ -52,6 +52,9 @@ __package_manager() {
   else
     [ -n "${names[apt]}" ] && __available apt-get && options+=(apt)
     [ -n "${names[apk]}" ] && __available apk && options+=(apk)
+    [ -n "${names[dnf]}" ] && __available dnf && options+=(dnf)
+    # yum of Rocky Linux 8 and later is dnf
+    [ -n "${names[yum]}" ] && __available yum && ! __available dnf && options+=(yum)
   fi
   options+=(manual)
 
@@ -344,8 +347,8 @@ __init_zshsetup() {
   __require kv
   # END EXTRA TOOLS
 
-  # the apt lists that installs downloaded onto a system without them
-  __apt_cleanup
+  # the metadata of apt, dnf, and yum that installs downloaded onto a system without any
+  __clean_metadata
 
   # BEGIN ALIASES
   alias b="bat --paging=never --style=plain --tabs=4"
@@ -523,6 +526,6 @@ fi
 # CLEANUP
 unfunction __assure_link __assure_dir __package_manager __last_match __pmg_installed __require __source
 unfunction __init_cache __init_zshsetup_env __init_zshsetup __install_zshsetup __save_settings
-unfunction __which __available __download __uv_libc __bootstrap_uv __apt_lists __system_install __apt_cleanup
+unfunction __which __available __download __uv_libc __bootstrap_uv __has_metadata __system_install __clean_metadata
 unfunction __install_chosen __install_main
-unset __PMG_TAG __APT_LISTS_CREATED
+unset __PMG_TAG __METADATA_CREATED

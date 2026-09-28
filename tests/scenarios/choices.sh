@@ -16,7 +16,7 @@ apt_lists() { find /var/lib/apt/lists -maxdepth 1 -type f ! -name lock | head -n
 # curl from apt brings its certificates, and nothing lands in ~/.local/bin
 check "the image has no apt lists" test -z "$(apt_lists)"
 check "curl installs with ZSHSETUP_CHOICE_CURL=apt" env ZSHSETUP_CHOICE_CURL=apt zsh -c "$functions
-__package_manager curl && __apt_cleanup"
+__package_manager curl && __clean_metadata"
 check "curl comes from apt" apt_installed curl
 check "ca-certificates come with curl from apt" apt_installed ca-certificates
 check "no pmg curl in \$XDG_BIN_HOME" test ! -e "$XDG_BIN_HOME/curl"

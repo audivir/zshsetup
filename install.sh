@@ -104,53 +104,80 @@ __bootstrap_uv() {
 }
 
 # prints whether the apt lists hold any package index
-__apt_lists() {
-  find /var/lib/apt/lists -maxdepth 1 -type f ! -name lock 2>/dev/null | head -n 1
+# checks whether the package index of apt, or the repo metadata of dnf or yum, is on the system;
+# with globs, as the image of Rocky Linux has no find
+__has_metadata() { # manager
+  local file
+  case "$1" in
+    apt) set -- /var/lib/apt/lists/* ;;
+    dnf) set -- /var/cache/dnf/*/repodata/repomd.xml ;;
+    yum) set -- /var/cache/yum/*/*/*/repomd.xml ;;
+    *) return 1 ;;
+  esac
+  for file; do
+    [ -f "$file" ] && [ "${file##*/}" != lock ] && return 0
+  done
+  return 1
 }
 
-# installs packages with brew, apt, or apk, as root or with sudo; fails if the manager is missing
-# apk keeps no index, and apt lists downloaded onto a system without any are removed by __apt_cleanup
+# installs packages with brew, apt, apk, dnf, or yum, as root or with sudo; fails if the manager is
+# missing; apk keeps no index, and the metadata the others download onto a system without any is
+# removed by __clean_metadata
 __system_install() { # manager, packages
-  local manager sudo
+  local manager command sudo
   manager="$1"
   shift
+  case "$manager" in
+    apt) command=apt-get ;;
+    brew | apk | dnf | yum) command="$manager" ;;
+    *) return 1 ;;
+  esac
+  __available "$command" || return 1
   sudo=""
   if [ "$manager" != brew ] && [ "$(id -u)" -ne 0 ]; then
     __available sudo || return 1
     sudo="sudo"
   fi
+  if [ "$manager" != brew ] && [ "$manager" != apk ] && ! __has_metadata "$manager"; then
+    __METADATA_CREATED="${__METADATA_CREATED:-} $manager"
+  fi
   case "$manager" in
     brew)
-      __available brew && NONINTERACTIVE=1 brew install "$@"
+      NONINTERACTIVE=1 brew install "$@"
       ;;
     apk)
-      __available apk && $sudo apk add --no-cache "$@"
+      $sudo apk add --no-cache "$@"
       ;;
     apt)
-      __available apt-get || return 1
       # fresh systems and containers have no lists, others may have outdated ones
-      if [ -z "$(__apt_lists)" ]; then
+      if ! __has_metadata apt; then
         $sudo apt-get update || return 1
-        __APT_LISTS_CREATED=1
       fi
       $sudo env DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends --yes "$@" \
         || { $sudo apt-get update && $sudo env DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends --yes "$@"; }
       ;;
-    *)
-      return 1
+    dnf)
+      # weak dependencies are the recommends of apt
+      $sudo dnf install --assumeyes --setopt=install_weak_deps=False "$@"
+      ;;
+    yum)
+      $sudo yum install --assumeyes "$@"
       ;;
   esac
 }
 
-# removes the apt lists __system_install downloaded, as they were missing before
-__apt_cleanup() {
-  [ -n "${__APT_LISTS_CREATED:-}" ] || return 0
-  if [ "$(id -u)" -eq 0 ]; then
-    rm -rf /var/lib/apt/lists/*
-  else
-    sudo sh -c 'rm -rf /var/lib/apt/lists/*'
-  fi
-  __APT_LISTS_CREATED=""
+# removes the metadata __system_install downloaded onto a system without any, as images have none
+__clean_metadata() {
+  local manager sudo
+  sudo=""
+  [ "$(id -u)" -eq 0 ] || sudo="sudo"
+  for manager in ${__METADATA_CREATED:-}; do
+    case "$manager" in
+      apt) $sudo sh -c 'rm -rf /var/lib/apt/lists/*' ;;
+      dnf | yum) $sudo "$manager" clean all >/dev/null ;;
+    esac
+  done
+  __METADATA_CREATED=""
 }
 
 # installs a package with the manager ZSHSETUP_CHOICE_<PACKAGE> or ZSHSETUP_CHOICE picks, if the
@@ -186,7 +213,7 @@ __install_main() {
     exit 1
   fi
 
-  trap __apt_cleanup EXIT
+  trap __clean_metadata EXIT
   export PATH="$HOME/.local/bin:$PATH"
 
   # uv from the chosen package manager, or bootstrapped where packages/pmg would put it, so it is

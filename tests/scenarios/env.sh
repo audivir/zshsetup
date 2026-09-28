@@ -86,5 +86,16 @@ if command -v apk >/dev/null 2>&1; then
   check "ZSHSETUP_CHOICE_TREE=apk installs tree with apk" chosen tree 'apk tree' ZSHSETUP_CHOICE_TREE=apk
   check "apk keeps no index" test -z "$(ls -A /var/cache/apk 2>/dev/null)"
 fi
+if command -v dnf >/dev/null 2>&1; then
+  # shellcheck disable=SC2329
+  has_metadata() { env ZSHSETUP_INSTALL_LIB=1 sh -c ". '$REPO/install.sh' && __has_metadata dnf"; }
+  # shellcheck disable=SC2329
+  no_metadata() { ! has_metadata; }
+  check "the image has no dnf metadata" no_metadata
+  check "ZSHSETUP_CHOICE_JQ=dnf installs jq with dnf" env ZSHSETUP_INSTALL_LIB=1 ZSHSETUP_CHOICE_JQ=dnf \
+    sh -c ". '$REPO/install.sh' && __install_chosen jq 'dnf jq' && __clean_metadata"
+  check "jq comes from dnf" rpm -q jq
+  check "the dnf metadata downloaded for jq is removed" no_metadata
+fi
 
 finish
