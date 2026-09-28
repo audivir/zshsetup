@@ -1,8 +1,12 @@
 #!/bin/sh
-# runs pmg from the zshsetup checkout, with the uv from PATH or one bootstrapped into the cache
+# runs pmg with uvx, with the uv from PATH or one bootstrapped into the cache
 set -eu
 
 zshsetup_home="${ZSHSETUP_HOME:-$HOME/.config/zshsetup}"
+# the archive of a fixed commit, as uv would need git for a git URL and ask GitHub for the latest
+# commit on every run; ZSHSETUP_PMG replaces it, e.g. with a local checkout
+pmg_commit="f3a8c81b4f7b0243603f8a73722eb6c106f4dbd6"
+pmg="${ZSHSETUP_PMG:-https://github.com/audivir/pmg/archive/$pmg_commit.tar.gz}"
 
 # prints a URL with curl, wget, python3, or apt-helper, whichever exists
 download() {
@@ -67,4 +71,4 @@ fi
 export PMG_SPECS_DIR="${PMG_SPECS_DIR:-$zshsetup_home/packages/specs}"
 export PMG_GH_TOKEN="${PMG_GH_TOKEN:-${ZSHSETUP_GH_TOKEN:-}}"
 export PMG_RUST_TOOLCHAIN="${PMG_RUST_TOOLCHAIN:-${ZSHSETUP_RUST_TOOLCHAIN:-}}"
-exec "$uv" run --quiet --project "$zshsetup_home/pmg" python -m pmg "$@"
+exec "$uv" tool run --quiet --from "$pmg" pmg "$@"

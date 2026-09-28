@@ -12,33 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.0.1
-        with:
-          python-version: "3.13"
-      # the hooks of pmg run its mypy
-      - run: uv sync --group dev --project pmg
-      - run: echo "$PWD/pmg/.venv/bin" >> "$GITHUB_PATH"
       - uses: j178/prek-action@v3.0.0
-  pmg:
-    strategy:
-      fail-fast: false
-      matrix:
-        runner: [ubuntu-latest, ubuntu-24.04-arm, macos-15]
-    runs-on: ${{ matrix.runner }}
-    defaults:
-      run:
-        working-directory: pmg
-    steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.0.1
-        with:
-          python-version: "3.13"
-      - run: uv sync --group dev
-      - run: uv run coverage run -m pytest
-        env:
-          PMG_GH_TOKEN: ${{ github.token }}
-      - run: uv run coverage combine || true
-      - run: uv run coverage report
   tests:
     strategy:
       fail-fast: false

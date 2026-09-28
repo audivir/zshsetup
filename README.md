@@ -3,8 +3,9 @@
 Cross-platform zsh dotfiles with a package manager for tools in the home directory.
 
 `.zshrc` sets up the XDG base directories, oh-my-zsh, and a set of command line tools. Missing
-tools are installed on shell start, either with Homebrew, APT, apk, or [pmg](pmg/README.md), a
-package manager for prebuilt binaries that needs no admin rights.
+tools are installed on shell start, either with Homebrew, APT, apk, or
+[pmg](https://github.com/audivir/pmg), a package manager for prebuilt binaries that needs no admin
+rights.
 
 ## Prerequisites
 
@@ -13,9 +14,9 @@ package manager for prebuilt binaries that needs no admin rights.
   (`git` is installed from prebuilt binaries if missing)
 - `zsh` (installed to `~/.local` with [zsh-bin](https://github.com/romkatv/zsh-bin) if missing)
 
-pmg runs with [uv](https://github.com/astral-sh/uv). Without a `uv` in `PATH`, `packages/pmg`
-downloads one into `~/.cache/zshsetup/uv` with any of the tools above and checks its SHA-256. uv
-brings the Python for pmg, and pmg its own CA certificates, so no system certificates are needed.
+`packages/pmg` runs pmg with `uvx`, at the commit it pins. Without a `uv` in `PATH`, it downloads
+one into `~/.cache/zshsetup/uv` with any of the tools above and checks its SHA-256. uv brings the
+Python for pmg, and pmg its own CA certificates, so no system certificates are needed.
 
 ## Installation
 
@@ -102,6 +103,8 @@ them to `preinit.zsh` for later shells.
 - `ZSHSETUP_GH_TOKEN`: GitHub token for API requests, which are limited to 60 per hour without.
   It is not saved to `preinit.zsh`.
 - `ZSHSETUP_RUST_TOOLCHAIN`: default toolchain for the `rustup` install of pmg (`stable` if unset).
+- `ZSHSETUP_PMG`: pmg to run instead of the pinned commit, as `uvx --from` takes it (e.g. a local
+  checkout).
 
 ## Testing
 
@@ -109,7 +112,7 @@ them to `preinit.zsh` for later shells.
 Debian, Ubuntu, Rocky Linux 8), or with `--native` on the current machine with a temporary `HOME`:
 `env` (settings and choices), `packages`, `choices` (apt), `lifecycle` (upgrade, uninstall),
 `shell` (a full installation from the working tree), and the slow `musl` (micromamba, Rust, bun) and
-`all` (every package through a shell start). pmg has its own tests in `pmg/tests/`.
+`all` (every package through a shell start). pmg has its own tests in its repo.
 Set `ZSHSETUP_GH_TOKEN` to avoid GitHub's API rate limit.
 
 ## License
