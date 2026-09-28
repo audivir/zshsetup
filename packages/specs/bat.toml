@@ -8,6 +8,7 @@ completions.bat.fish = "autocomplete/bat.fish"
 [external]
 brew = "bat"
 apt = "bat"
+apk = "bat"
 
 [release]
 type = "github"

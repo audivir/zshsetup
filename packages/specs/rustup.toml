@@ -11,6 +11,7 @@ upgrade = "{{ dirs.cargo }}/bin/rustup self update"
 [external]
 brew = "rustup"
 apt = "rustup"
+apk = "rustup"
 
 [release]
 type = "command"

@@ -6,6 +6,7 @@ completions.uv.fish.cmd = "uv generate-shell-completion fish"
 
 [external]
 brew = "uv"
+apk = "uv"
 
 [release]
 type = "github"

@@ -1,6 +1,7 @@
 # uvc has no releases, so the tag is the start of the sha256 of the current script
 deps = ["curl", "uv", "python3>=3.11"]
 bin = { uvc = "{{ asset }}" }
+check = { cmd = ["uvc", "envs"] }
 
 [external]
 brew = "uvc"

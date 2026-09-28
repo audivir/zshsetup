@@ -1,6 +1,5 @@
 # the gnu build needs glibc 2.39; older glibc hosts get the musl build, which runs with the musl
 # loader of pmg unless the host has one
-platforms = ["glibc_x64", "glibc_arm64", "musl_x64", "musl_arm64"]
 min_glibc = "2.39"
 platform_deps = { musl_x64 = ["musl"], musl_arm64 = ["musl"] }
 bin = { kv = "{{ asset }}" }
@@ -29,3 +28,4 @@ glibc_x64 = "kv-x86_64-unknown-linux-gnu"
 glibc_arm64 = "kv-aarch64-unknown-linux-gnu"
 musl_x64 = "kv-x86_64-unknown-linux-musl"
 musl_arm64 = "kv-aarch64-unknown-linux-musl"
+macos_arm64 = "kv-aarch64-apple-darwin"
