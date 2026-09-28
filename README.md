@@ -29,6 +29,23 @@ Python for pmg, and pmg its own CA certificates, so no system certificates are n
 
 This clones the repo to `~/.config/zshsetup` and links `~/.zshrc` to its `.zshrc`.
 
+To try it in a container, each image downloads `install.sh` with the tool it has, installs every
+package with pmg, and starts `zsh` from `~/.local/bin`. `GH_TOKEN` avoids GitHub's API rate limit
+and needs the [GitHub CLI](https://cli.github.com):
+
+```bash
+# Alpine (BusyBox wget)
+docker run -it --rm -e ZSHSETUP_CHOICE=manual -e GH_TOKEN="$(gh auth token)" alpine:3.22 sh -c 'wget -qO- https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh | sh && PATH="$HOME/.local/bin:$PATH" exec zsh'
+# Debian (apt-helper, as there is neither curl, wget, python3, nor CA certificates)
+docker run -it --rm -e ZSHSETUP_CHOICE=manual -e GH_TOKEN="$(gh auth token)" debian:stable-slim sh -c 't=$(mktemp) && /usr/lib/apt/apt-helper -o Acquire::https::Verify-Peer=false download-file https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh "$t" >/dev/null && sh "$t" && PATH="$HOME/.local/bin:$PATH" exec zsh'
+# Ubuntu (apt-helper, as for Debian)
+docker run -it --rm -e ZSHSETUP_CHOICE=manual -e GH_TOKEN="$(gh auth token)" ubuntu:24.04 sh -c 't=$(mktemp) && /usr/lib/apt/apt-helper -o Acquire::https::Verify-Peer=false download-file https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh "$t" >/dev/null && sh "$t" && PATH="$HOME/.local/bin:$PATH" exec zsh'
+# Rocky Linux 8 (curl)
+docker run -it --rm -e ZSHSETUP_CHOICE=manual -e GH_TOKEN="$(gh auth token)" rockylinux:8 sh -c 'curl -fsSL https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh | sh && PATH="$HOME/.local/bin:$PATH" exec zsh'
+# CentOS 7 (curl, glibc 2.17)
+docker run -it --rm -e ZSHSETUP_CHOICE=manual -e GH_TOKEN="$(gh auth token)" centos:7 sh -c 'curl -fsSL https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh | sh && PATH="$HOME/.local/bin:$PATH" exec zsh'
+```
+
 If `bash` is the login shell and cannot be changed, switch to `zsh` from `~/.bashrc`:
 
 ```bash
