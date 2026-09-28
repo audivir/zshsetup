@@ -16,7 +16,7 @@ for p in bat micro uv git; do
   check "$p uninstalls" pmg uninstall "$p"
   check "$p is gone" test ! -e "$XDG_BIN_HOME/$p"
 done
-check "git uninstall removes its package dir" sh -c "! ls -d '$XDG_DATA_HOME'/git@* 2>/dev/null"
+check "git uninstall removes its package dir" sh -c "! ls -d '$XDG_DATA_HOME'/pmg/packages/git@* 2>/dev/null"
 out="$(pmg upgrade micro 2>&1)"
 check "upgrading a package that is not installed is a no-op" test -z "$out"
 

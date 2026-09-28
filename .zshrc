@@ -209,7 +209,7 @@ __init_zshsetup_env() {
   export PYTHON_HISTORY="$XDG_DATA_HOME/python/python_history"
   # without system certificates, git and micromamba use the ones bundled with git-static
   local git_certs
-  git_certs="$(__last_match "$XDG_DATA_HOME/git@*/share/git-core/certs")"
+  git_certs="$(__last_match "${PMG_HOME:-$XDG_DATA_HOME/pmg}/packages/git@*/share/git-core/certs")"
   if [ ! -e /etc/ssl/cert.pem ] && [ -z "$(ls -A /etc/ssl/certs 2>/dev/null)" ] && [ -n "$git_certs" ]; then
     export GIT_SSL_CAPATH="$git_certs"
     export MAMBA_SSL_VERIFY="$GIT_SSL_CAPATH/cacert.pem"
@@ -287,7 +287,7 @@ __init_zshsetup() {
     alias conda='micromamba'
     export MAMBA_ROOT_PREFIX="$XDG_DATA_HOME/micromamba"
     local real_exe
-    real_exe="$(__last_match "$XDG_DATA_HOME/micromamba@*/micromamba")"
+    real_exe="$(__last_match "${PMG_HOME:-$XDG_DATA_HOME/pmg}/packages/micromamba@*/micromamba")"
     if [ -n "$real_exe" ]; then
       # on musl, the hook calls the real binary by path, but the wrapper also patches new programs for glibc
       local hook
@@ -317,7 +317,7 @@ __init_zshsetup() {
   fi
   # musl toolchains need libgcc_s
   local musl_libs
-  musl_libs="$(__last_match "$XDG_DATA_HOME/musl-libs@*/usr/lib")"
+  musl_libs="$(__last_match "${PMG_HOME:-$XDG_DATA_HOME/pmg}/packages/musl-libs@*/usr/lib")"
   if [ -n "$musl_libs" ] && [ ! -e /usr/lib/libgcc_s.so.1 ]; then
     export LD_LIBRARY_PATH="$musl_libs${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
   fi

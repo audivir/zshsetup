@@ -55,7 +55,7 @@ check "the next shell does not retry the failed install" lacks "$out" "Install m
 check "zshsetup's bin comes first on PATH" contains "$out" "path1=$home/bin"
 check "uvc's shell function is loaded" contains "$out" "uvc: function"
 if [ ! -e /etc/ssl/cert.pem ] && [ -z "$(ls -A /etc/ssl/certs 2>/dev/null)" ]; then
-  check "git uses its bundled certificates without system ones" contains "$out" "capath=$XDG_DATA_HOME/git@.*/share/git-core/certs"
+  check "git uses its bundled certificates without system ones" contains "$out" "capath=$XDG_DATA_HOME/pmg/packages/git@.*/share/git-core/certs"
 else
   check "git uses the system certificates" contains "$out" "capath=\$"
 fi

@@ -37,8 +37,8 @@ run micro "micro --version"
 run kv "kv --version"
 run zstd "zstd --version"
 if is_linux; then
-  is_musl && run glibc "\$XDG_DATA_HOME/glibc@*/loader --version"
-  is_musl && run musl-libs "test -e \$XDG_DATA_HOME/musl-libs@*/usr/lib/libgcc_s.so.1"
+  is_musl && run glibc "\$XDG_DATA_HOME/pmg/packages/glibc@*/loader --version"
+  is_musl && run musl-libs "test -e \$XDG_DATA_HOME/pmg/packages/musl-libs@*/usr/lib/libgcc_s.so.1"
   run patchelf "patchelf --version"
 fi
 
