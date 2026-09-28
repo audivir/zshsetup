@@ -100,12 +100,12 @@ if [ -z "$uv" ]; then
   fi
 fi
 
-# pmg at the commit packages/pmg pins, into the directories .zshrc uses; uv checks certificates
+# pmg at the tag packages/pmg pins, into the directories .zshrc uses; uv checks certificates
 # with its own, so the system needs none
-pmg_commit="ee69292bb501f775c5547425b09f923bfed696bb"
+pmg_tag="v1.1.0"
 pmg() {
   XDG_BIN_HOME="$HOME/.local/bin" XDG_DATA_HOME="$HOME/.local/share" PMG_GH_TOKEN="${ZSHSETUP_GH_TOKEN:-}" \
-    "$uv" tool run --quiet --from "${ZSHSETUP_PMG:-https://github.com/audivir/pmg/archive/$pmg_commit.tar.gz}" \
+    "$uv" tool run --quiet --from "${ZSHSETUP_PMG:-https://github.com/audivir/pmg/archive/refs/tags/$pmg_tag.tar.gz}" \
     python -m pmg "$@"
 }
 

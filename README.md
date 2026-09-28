@@ -15,7 +15,7 @@ rights.
 - `sha256sum` (GNU coreutils, BusyBox) or `shasum` (macOS), unless `uv` is in `PATH`
 - `zsh` (installed to `~/.local` with pmg from [zsh-bin](https://github.com/romkatv/zsh-bin) if missing)
 
-`install.sh` and `packages/pmg` run pmg with `uvx`, at the commit they pin. Without a `uv` in
+`install.sh` and `packages/pmg` run pmg with `uvx`, at the tag they pin. Without a `uv` in
 `PATH`, they download a fixed uv into `~/.cache/zshsetup/uv` with any of the tools above and check
 its SHA-256: the gnu build on glibc 2.28 or newer, else the static musl build. uv brings the
 Python for pmg, and pmg its own CA certificates, so no system certificates are needed.
@@ -105,7 +105,7 @@ them to `preinit.zsh` for later shells.
 - `ZSHSETUP_GH_TOKEN`: GitHub token for API requests, which are limited to 60 per hour without.
   It is not saved to `preinit.zsh`.
 - `ZSHSETUP_RUST_TOOLCHAIN`: default toolchain for the `rustup` install of pmg (`stable` if unset).
-- `ZSHSETUP_PMG`: pmg to run instead of the pinned commit, as `uvx --from` takes it (e.g. a local
+- `ZSHSETUP_PMG`: pmg to run instead of the pinned tag, as `uvx --from` takes it (e.g. a local
   checkout).
 
 ## Testing
