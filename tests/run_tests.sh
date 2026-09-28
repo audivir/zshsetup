@@ -9,7 +9,7 @@
 #             musl expect a bare system, so they only fit containers
 #   SCENARIO  env packages choices lifecycle shell musl all (default: all but the slow musl and all)
 #
-# ZSHSETUP_GH_TOKEN is passed on to avoid GitHub's API rate limit; ZSHSETUP_TEST_PACKAGES sets
+# PMG_GH_TOKEN is passed on to avoid GitHub's API rate limit; ZSHSETUP_TEST_PACKAGES sets
 # the packages of the packages scenario.
 #
 set -euo pipefail
@@ -59,7 +59,7 @@ for scenario in "${SCENARIOS[@]}"; do
   fi
   for image in "${IMAGES[@]}"; do
     echo "== $image: $scenario"
-    if ! docker run --rm -e ZSHSETUP_GH_TOKEN -e ZSHSETUP_TEST_PACKAGES -v "$ROOT_DIR:/zshsetup:ro" \
+    if ! docker run --rm -e PMG_GH_TOKEN -e ZSHSETUP_TEST_PACKAGES -v "$ROOT_DIR:/zshsetup:ro" \
       "$image" sh "/zshsetup/tests/scenarios/$scenario.sh"; then
       status=1
     fi

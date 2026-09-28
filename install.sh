@@ -104,7 +104,7 @@ fi
 # with its own, so the system needs none
 pmg_tag="v1.1.0"
 pmg() {
-  XDG_BIN_HOME="$HOME/.local/bin" XDG_DATA_HOME="$HOME/.local/share" PMG_GH_TOKEN="${ZSHSETUP_GH_TOKEN:-}" \
+  XDG_BIN_HOME="$HOME/.local/bin" XDG_DATA_HOME="$HOME/.local/share" \
     "$uv" tool run --quiet --from "${ZSHSETUP_PMG:-https://github.com/audivir/pmg/archive/refs/tags/$pmg_tag.tar.gz}" \
     python -m pmg "$@"
 }

@@ -37,7 +37,7 @@ check "a failed install leaves a marker" test -e "$home/failed/micro"
 check "a failed install warns" grep -q "installing micro failed" /tmp/install-zshrc.log
 
 # a new shell reads preinit.zsh, skips the failed package, and sets up the tools
-clean_env="HOME=$HOME USER=$USER PATH=/usr/bin:/bin:$XDG_BIN_HOME TERM=dumb ZSHSETUP_GH_TOKEN=${ZSHSETUP_GH_TOKEN:-}"
+clean_env="HOME=$HOME USER=$USER PATH=/usr/bin:/bin:$XDG_BIN_HOME TERM=dumb PMG_GH_TOKEN=${PMG_GH_TOKEN:-}"
 # shellcheck disable=SC2016,SC2086
 out="$(env -i $clean_env zsh -i -c 'echo "path1=$path[1]"; whence -w uvc; echo "capath=$GIT_SSL_CAPATH"' 2>&1)"
 check "the next shell does not retry the failed install" lacks "$out" "Install micro via"

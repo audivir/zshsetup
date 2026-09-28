@@ -387,7 +387,7 @@ __init_zshsetup() {
   # END CUSTOM FUNCTIONS
 }
 
-# keeps the ZSHSETUP_* settings given at installation for later shells
+# keeps the ZSHSETUP_* settings and the toolchain of pmg given at installation for later shells
 # shellcheck disable=SC2296
 __save_settings() {
   local preinit var
@@ -397,7 +397,7 @@ __save_settings() {
     chmod +x "$preinit" || return 1
   fi
   for var in ZSHSETUP_CHOICE ${(k)parameters[(I)ZSHSETUP_CHOICE_*]} ${(k)parameters[(I)ZSHSETUP_REQUIRE_*]} \
-    ${(k)parameters[(I)ZSHSETUP_DISABLE_*]} ZSHSETUP_IGNORESCRATCH ZSHSETUP_RUST_TOOLCHAIN; do
+    ${(k)parameters[(I)ZSHSETUP_DISABLE_*]} ZSHSETUP_IGNORESCRATCH PMG_RUST_TOOLCHAIN; do
     if [ -n "${(P)var}" ]; then
       echo "export $var=${(q)${(P)var}}" >>"$preinit" || return 1
     fi

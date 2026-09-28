@@ -102,9 +102,10 @@ them to `preinit.zsh` for later shells.
   (e.g. `ZSHSETUP_REQUIRE_ZIG=1`, or `ZSHSETUP_REQUIRE_MICROMAMBA=1` on musl with a user-space glibc).
 - `ZSHSETUP_DISABLE_<PACKAGE>`: do not install a default package (e.g. `ZSHSETUP_DISABLE_BUN=1`);
   it is still installed when another package depends on it.
-- `ZSHSETUP_GH_TOKEN`: GitHub token for API requests, which are limited to 60 per hour without.
-  It is not saved to `preinit.zsh`.
-- `ZSHSETUP_RUST_TOOLCHAIN`: default toolchain for the `rustup` install of pmg (`stable` if unset).
+- `PMG_GH_TOKEN`: GitHub token for the API requests of pmg, which are limited to 60 per hour
+  without. It is not saved to `preinit.zsh`.
+- `PMG_RUST_TOOLCHAIN`: default toolchain for the `rustup` install of pmg (`stable` if unset).
+- `PMG_SPECS_DIR`: specs of pmg to use instead of `packages/specs/`.
 - `ZSHSETUP_PMG`: pmg to run instead of the pinned tag, as `uvx --from` takes it (e.g. a local
   checkout).
 
@@ -115,7 +116,7 @@ Debian, Ubuntu, Rocky Linux 8), or with `--native` on the current machine with a
 `env` (settings and choices), `packages`, `choices` (apt), `lifecycle` (upgrade, uninstall),
 `shell` (a full installation from the working tree), and the slow `musl` (micromamba, Rust, bun) and
 `all` (every package through a shell start). pmg has its own tests in its repo.
-Set `ZSHSETUP_GH_TOKEN` to avoid GitHub's API rate limit.
+Set `PMG_GH_TOKEN` to avoid GitHub's API rate limit.
 
 ## License
 

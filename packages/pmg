@@ -82,7 +82,5 @@ if [ -z "$uv" ]; then
 fi
 
 export PMG_SPECS_DIR="${PMG_SPECS_DIR:-$zshsetup_home/packages/specs}"
-export PMG_GH_TOKEN="${PMG_GH_TOKEN:-${ZSHSETUP_GH_TOKEN:-}}"
-export PMG_RUST_TOOLCHAIN="${PMG_RUST_TOOLCHAIN:-${ZSHSETUP_RUST_TOOLCHAIN:-}}"
 # python -m pmg, as the pmg script of uv needs a realpath with --, which BusyBox (Alpine) lacks
 exec "$uv" tool run --quiet --from "$pmg" python -m pmg "$@"

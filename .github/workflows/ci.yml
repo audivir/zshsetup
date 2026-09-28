@@ -23,11 +23,11 @@ jobs:
       - uses: actions/checkout@v7
       - run: ./tests/run_tests.sh
         env:
-          ZSHSETUP_GH_TOKEN: ${{ github.token }}
+          PMG_GH_TOKEN: ${{ github.token }}
   macos:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v7
       - run: ./tests/run_tests.sh --native env packages lifecycle
         env:
-          ZSHSETUP_GH_TOKEN: ${{ github.token }}
+          PMG_GH_TOKEN: ${{ github.token }}

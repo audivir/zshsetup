@@ -32,14 +32,14 @@ check "no choice and no terminal stops with a hint" contains "$out" "set ZSHSETU
 # settings given at installation are saved to preinit.zsh
 preinit_home="$(mktemp -d)"
 env -i HOME="$HOME" PATH="$PATH" ZSHSETUP_HOME="$preinit_home" ZSHSETUP_CHOICE=manual ZSHSETUP_CHOICE_CURL=apt \
-  ZSHSETUP_REQUIRE_ZIG=1 ZSHSETUP_DISABLE_BUN=1 ZSHSETUP_RUST_TOOLCHAIN="1.80 beta" ZSHSETUP_GH_TOKEN=secret \
+  ZSHSETUP_REQUIRE_ZIG=1 ZSHSETUP_DISABLE_BUN=1 PMG_RUST_TOOLCHAIN="1.80 beta" PMG_GH_TOKEN=secret \
   zsh -c "$(zshrc_function __save_settings)
 __save_settings"
 for setting in "ZSHSETUP_CHOICE=manual" "ZSHSETUP_CHOICE_CURL=apt" "ZSHSETUP_REQUIRE_ZIG=1" "ZSHSETUP_DISABLE_BUN=1"; do
   check "preinit.zsh saves $setting" grep -qx "export $setting" "$preinit_home/preinit.zsh"
 done
-check "preinit.zsh quotes values" zsh -c ". $preinit_home/preinit.zsh; [ \"\$ZSHSETUP_RUST_TOOLCHAIN\" = '1.80 beta' ]"
-check "preinit.zsh does not save ZSHSETUP_GH_TOKEN" sh -c "! grep -q GH_TOKEN $preinit_home/preinit.zsh"
+check "preinit.zsh quotes values" zsh -c ". $preinit_home/preinit.zsh; [ \"\$PMG_RUST_TOOLCHAIN\" = '1.80 beta' ]"
+check "preinit.zsh does not save PMG_GH_TOKEN" sh -c "! grep -q GH_TOKEN $preinit_home/preinit.zsh"
 check "preinit.zsh is executable" test -x "$preinit_home/preinit.zsh"
 
 # the cache moves to /scratch when it exists, unless ignored
@@ -70,10 +70,5 @@ __init_cache" 2>&1
 else
   echo "  skip  /scratch tests (cannot create /scratch)"
 fi
-
-# ZSHSETUP_GH_TOKEN reaches pmg as PMG_GH_TOKEN
-# shellcheck disable=SC2016
-check "the pmg wrapper passes ZSHSETUP_GH_TOKEN on" grep -q 'PMG_GH_TOKEN="${PMG_GH_TOKEN:-${ZSHSETUP_GH_TOKEN:-}}"' \
-  "$ZSHSETUP_HOME/packages/pmg"
 
 finish

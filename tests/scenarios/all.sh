@@ -10,7 +10,10 @@ is_musl && export ZSHSETUP_REQUIRE_GLIBC=1 ZSHSETUP_REQUIRE_MUSL_LIBS=1
 
 zsh -i -c 'echo ready' >/tmp/all-install.log 2>&1 || true
 check "no install failed" test ! -e "$ZSHSETUP_HOME/failed"
-[ -e "$ZSHSETUP_HOME/failed" ] && echo "  info  failed: $(cd "$ZSHSETUP_HOME/failed" && echo *)"
+if [ -e "$ZSHSETUP_HOME/failed" ]; then
+  echo "  info  failed: $(cd "$ZSHSETUP_HOME/failed" && echo *)"
+  tail -n 60 /tmp/all-install.log | sed 's/^/        /'
+fi
 
 run() {
   echo "  info  $1: $(zsh -i -c "whence -p ${2%% *}" 2>/dev/null)"
