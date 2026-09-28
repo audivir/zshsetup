@@ -64,11 +64,27 @@ __package_manager() {
   if [ -n "$choice" ]; then
     # an unavailable choice (e.g. apt on macOS) falls back to manual
     ((${options[(Ie)$choice]})) || choice="manual"
+  elif ((${#options} == 1)); then
+    # nothing to choose from
+    choice="manual"
   elif { : </dev/tty; } 2>/dev/null; then
-    PS3="choice: "
-    select choice in "${options[@]}"; do
-      [ -n "$choice" ] && break
-    done </dev/tty >/dev/tty 2>&1
+    # read instead of select, which goes through the line editor, where plugins like
+    # zsh-syntax-highlighting break it during the shell start
+    local answer i
+    local -a numbered
+    for ((i = 1; i <= ${#options}; i++)); do
+      numbered+=("$i) ${options[i]}")
+    done
+    while [ -z "$choice" ]; do
+      print -r -- "${(j:  :)numbered}" >/dev/tty
+      printf 'choice: ' >/dev/tty
+      read -r answer </dev/tty || break
+      if [[ "$answer" =~ ^[0-9]+$ ]] && ((answer >= 1 && answer <= ${#options})); then
+        choice="${options[answer]}"
+      elif ((${options[(Ie)$answer]})); then
+        choice="$answer"
+      fi
+    done
   fi
   if [ -z "$choice" ]; then
     __eprint "No install choice for $package, set ZSHSETUP_CHOICE or $choice_var"

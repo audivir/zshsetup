@@ -8,7 +8,7 @@ fake="$(mktemp -d)"
 cat >"$fake/pmg" <<'EOF'
 #!/bin/sh
 case "$1" in
-  external) echo "apt fakeapt" ;;
+  external) echo "${FAKE_EXTERNAL-apt fakeapt}" ;;
   install) echo "fake install $2" ;;
 esac
 EOF
@@ -26,8 +26,12 @@ out="$(choose ZSHSETUP_CHOICE=brew)"
 check "an unavailable choice falls back to manual" contains "$out" "fake install fake-pkg"
 out="$(choose ZSHSETUP_CHOICE=apt ZSHSETUP_CHOICE_FAKE_PKG=manual)"
 check "ZSHSETUP_CHOICE_<PACKAGE> overrides ZSHSETUP_CHOICE (dashes become underscores)" contains "$out" "fake install"
-out="$(choose ZSHSETUP_CHOICE= ZSHSETUP_CHOICE_FAKE_PKG=)"
-check "no choice and no terminal stops with a hint" contains "$out" "set ZSHSETUP_CHOICE or ZSHSETUP_CHOICE_FAKE_PKG"
+out="$(choose ZSHSETUP_CHOICE= FAKE_EXTERNAL=)"
+check "a package only pmg has installs without asking" contains "$out" "fake install fake-pkg"
+if has_apt; then
+  out="$(choose ZSHSETUP_CHOICE= ZSHSETUP_CHOICE_FAKE_PKG=)"
+  check "no choice and no terminal stops with a hint" contains "$out" "set ZSHSETUP_CHOICE or ZSHSETUP_CHOICE_FAKE_PKG"
+fi
 
 # settings given at installation are saved to preinit.zsh
 preinit_home="$(mktemp -d)"

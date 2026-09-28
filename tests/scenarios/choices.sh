@@ -42,6 +42,14 @@ if command -v script >/dev/null 2>&1; then
   ) | ZSHSETUP_CHOICE='' script -qec "zsh /tmp/menu.zsh" /dev/null 2>&1 | tr -d '\r')"
   check "the menu lists apt and manual" contains "$out" "1) apt.*2) manual"
   check "answering 2 installs with pmg" test -L "$XDG_BIN_HOME/micro"
+  # an answer out of range asks again, and the name works like the number
+  printf '%s\n__package_manager jq\n' "$functions" >/tmp/menu.zsh
+  out="$( (
+    sleep 10
+    printf '9\nmanual\n'
+  ) | ZSHSETUP_CHOICE='' script -qec "zsh /tmp/menu.zsh" /dev/null 2>&1 | tr -d '\r')"
+  check "an answer out of range asks again" test "$(printf '%s\n' "$out" | grep -c 'choice:')" -ge 2
+  check "answering manual installs with pmg" test -L "$XDG_BIN_HOME/jq"
 else
   echo "  skip  interactive menu (no script command)"
 fi
