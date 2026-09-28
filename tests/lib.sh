@@ -60,17 +60,19 @@ setup_env() {
   mkdir -p "$XDG_BIN_HOME" "$XDG_DATA_HOME"
 }
 
-# copies the working tree to $1 (the files an install clones)
+# copies the working tree to $1 (the files an install clones), without pmg's environment
 copy_tree() {
   mkdir -p "$1"
-  (cd "$REPO" && tar -cf - .gitignore .zshrc install.sh custom_functions.sh theme_viewer.sh packages) | tar -xf - -C "$1"
+  (cd "$REPO" && tar -cf - --exclude .venv --exclude __pycache__ --exclude uv.lock .gitignore .zshrc install.sh \
+    custom_functions.sh theme_viewer.sh completions packages pmg) | tar -xf - -C "$1"
 }
 
-# sets up ZSHSETUP_HOME from the working tree, for running package scripts directly
+# sets up ZSHSETUP_HOME from the working tree, for running pmg directly
 setup_zshsetup() {
   setup_env
   copy_tree "$ZSHSETUP_HOME"
-  mkdir -p "$ZSHSETUP_HOME/bin" "$ZSHSETUP_HOME/versions"
+  mkdir -p "$ZSHSETUP_HOME/bin"
+  ln -s "$ZSHSETUP_HOME/packages/pmg" "$ZSHSETUP_HOME/bin/pmg"
 }
 
 # prints a zsh function from .zshrc, to test it on its own

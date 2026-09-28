@@ -1,22 +1,29 @@
 #!/bin/sh
-# environment variables and small helpers: choices, preinit settings, /scratch, GitHub token, libc
+# environment variables and small helpers: choices, preinit settings, /scratch, GitHub token
 . "${ZSHSETUP_TEST_REPO:-/zshsetup}/tests/lib.sh"
 setup_zshsetup
-helper="$ZSHSETUP_HOME/packages/helper.sh"
 
-# a fake package, so choices can be checked without installing anything
-# shellcheck disable=SC2016
-printf '#!/bin/sh\necho "fake $1"\n' >"$ZSHSETUP_HOME/packages/fake-pkg.sh"
-chmod +x "$ZSHSETUP_HOME/packages/fake-pkg.sh"
-choose() { # env assignments..., then the package manager arguments
-  # shellcheck disable=SC2016
-  env "$@" zsh -c '. "$1"; shift; package_manager "$@"' sh "$helper" fake-pkg "" fakeapt </dev/null 2>&1
+# a fake pmg, so choices can be checked without installing anything
+fake="$(mktemp -d)"
+cat >"$fake/pmg" <<'EOF'
+#!/bin/sh
+case "$1" in
+  external) echo "apt fakeapt" ;;
+  install) echo "fake install $2" ;;
+esac
+EOF
+chmod +x "$fake/pmg"
+choose() { # env assignments, then runs __package_manager of .zshrc for fake-pkg
+  env PATH="$fake:$PATH" "$@" zsh -c "$(zshrc_function __eprint)
+$(zshrc_function __available)
+$(zshrc_function __package_manager)
+__package_manager fake-pkg" </dev/null 2>&1
 }
 
 out="$(choose ZSHSETUP_CHOICE=manual)"
-check "ZSHSETUP_CHOICE=manual runs the manual install" contains "$out" "fake install"
+check "ZSHSETUP_CHOICE=manual installs with pmg" contains "$out" "fake install fake-pkg"
 out="$(choose ZSHSETUP_CHOICE=brew)"
-check "an unavailable choice falls back to manual" contains "$out" "fake install"
+check "an unavailable choice falls back to manual" contains "$out" "fake install fake-pkg"
 out="$(choose ZSHSETUP_CHOICE=apt ZSHSETUP_CHOICE_FAKE_PKG=manual)"
 check "ZSHSETUP_CHOICE_<PACKAGE> overrides ZSHSETUP_CHOICE (dashes become underscores)" contains "$out" "fake install"
 out="$(choose ZSHSETUP_CHOICE= ZSHSETUP_CHOICE_FAKE_PKG=)"
@@ -64,23 +71,9 @@ else
   echo "  skip  /scratch tests (cannot create /scratch)"
 fi
 
-# libc detection picks the right downloads
-libc="$(zsh -c ". $helper; __libc")"
-if is_musl; then
-  check "__libc detects musl" test "$libc" = musl
-elif is_linux; then
-  check "__libc detects glibc" test "$libc" = gnu
-else
-  check "__libc is empty outside Linux" test -z "$libc"
-fi
-
-# ZSHSETUP_GH_TOKEN lifts the GitHub API rate limit
-if [ -n "${ZSHSETUP_GH_TOKEN:-}" ]; then
-  export ZSHSETUP_CHOICE=manual
-  limit="$(zsh -c ". $helper; require_cmd curl jq && github_api rate_limit | jq .resources.core.limit" 2>/dev/null)"
-  check "ZSHSETUP_GH_TOKEN authenticates GitHub API requests" test "${limit:-0}" -gt 60
-else
-  echo "  skip  ZSHSETUP_GH_TOKEN test (not set)"
-fi
+# ZSHSETUP_GH_TOKEN reaches pmg as PMG_GH_TOKEN
+# shellcheck disable=SC2016
+check "the pmg wrapper passes ZSHSETUP_GH_TOKEN on" grep -q 'PMG_GH_TOKEN="${PMG_GH_TOKEN:-${ZSHSETUP_GH_TOKEN:-}}"' \
+  "$ZSHSETUP_HOME/packages/pmg"
 
 finish

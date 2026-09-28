@@ -7,16 +7,17 @@ export ZSHSETUP_CHOICE=manual
 # a git repo of the working tree to install from, with micro failing on purpose
 src="$(mktemp -d)/zshsetup"
 copy_tree "$src"
-check "git installs for cloning" env ZSHSETUP_HOME="$src" "$src/packages/git.sh" install
-awk '{ print } /^install\(\) \{$/ { print "  return 1" }' "$src/packages/micro.sh" >"$src/packages/micro.sh.new"
-mv "$src/packages/micro.sh.new" "$src/packages/micro.sh"
-chmod +x "$src/packages/micro.sh"
+check "git installs for cloning" env ZSHSETUP_HOME="$src" sh "$src/packages/pmg" install git
+# a release that does not exist
+sed 's|^repo = "micro-editor/micro"$|repo = "micro-editor/micro-missing"|' "$src/packages/specs/micro.toml" \
+  >"$src/packages/specs/micro.toml.new"
+mv "$src/packages/specs/micro.toml.new" "$src/packages/specs/micro.toml"
 git -C "$src" init -q
 git -C "$src" add -A
 git -C "$src" -c user.name=test -c user.email=test@test commit -q -m test
 
 # rustup, go, micromamba, gawk, and bun are slow to install and covered elsewhere
-export ZSHSETUP_REPO="$src" ZSHSETUP_REQUIRE_PYTHON3=1 ZSHSETUP_DISABLE_JQ=1 ZSHSETUP_DISABLE_BUN=1 \
+export ZSHSETUP_REPO="$src" ZSHSETUP_REQUIRE_PATCHELF=1 ZSHSETUP_DISABLE_BUN=1 \
   ZSHSETUP_DISABLE_RUSTUP=1 ZSHSETUP_DISABLE_GO=1 ZSHSETUP_DISABLE_MICROMAMBA=1 ZSHSETUP_DISABLE_GAWK=1
 unset ZSHSETUP_HOME
 home="$HOME/.config/zshsetup"
@@ -24,12 +25,12 @@ check "zsh .zshrc install succeeds" zsh "$src/.zshrc" install
 cp /tmp/check.log /tmp/install-zshrc.log
 
 check "\$HOME/.zshrc links to the installed .zshrc" test "$(readlink "$HOME/.zshrc")" = "$home/.zshrc"
-for setting in "ZSHSETUP_CHOICE=manual" "ZSHSETUP_REQUIRE_PYTHON3=1" "ZSHSETUP_DISABLE_BUN=1"; do
+for setting in "ZSHSETUP_CHOICE=manual" "ZSHSETUP_REQUIRE_PATCHELF=1" "ZSHSETUP_DISABLE_BUN=1"; do
   check "preinit.zsh saves $setting" grep -qx "export $setting" "$home/preinit.zsh"
 done
-check "ZSHSETUP_REQUIRE_PYTHON3 installs python3" test -e "$XDG_BIN_HOME/python3"
+check "ZSHSETUP_REQUIRE_PATCHELF installs patchelf" test -e "$XDG_BIN_HOME/patchelf"
 check "ZSHSETUP_DISABLE_BUN skips bun" test ! -e "$XDG_BIN_HOME/bun"
-check "ZSHSETUP_DISABLE_JQ still installs jq as a dependency" test -x "$XDG_BIN_HOME/jq"
+check "the pmg command is linked" test -L "$home/bin/pmg"
 check "a failed install leaves a marker" test -e "$home/failed/micro"
 check "a failed install warns" grep -q "installing micro failed" /tmp/install-zshrc.log
 
@@ -41,7 +42,7 @@ check "the next shell does not retry the failed install" lacks "$out" "Install m
 check "zshsetup's bin comes first on PATH" contains "$out" "path1=$home/bin"
 check "uvc's shell function is loaded" contains "$out" "uvc: function"
 if [ ! -e /etc/ssl/cert.pem ] && [ -z "$(ls -A /etc/ssl/certs 2>/dev/null)" ]; then
-  check "git uses its bundled certificates without system ones" contains "$out" "capath=$HOME/.local/share/git-core/certs"
+  check "git uses its bundled certificates without system ones" contains "$out" "capath=$XDG_DATA_HOME/git@.*/share/git-core/certs"
 else
   check "git uses the system certificates" contains "$out" "capath=\$"
 fi

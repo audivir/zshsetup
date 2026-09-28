@@ -1,19 +1,21 @@
 # zshsetup
 
-Cross-platform zsh dotfiles and package-manager bootstrap scripts.
+Cross-platform zsh dotfiles with a package manager for tools in the home directory.
 
 `.zshrc` sets up the XDG base directories, oh-my-zsh, and a set of command line tools. Missing
-tools are installed on shell start, either with Homebrew, APT, or a manual install script from
-`packages/`.
+tools are installed on shell start, either with Homebrew, APT, apk, or [pmg](pmg/README.md), a
+package manager for prebuilt binaries that needs no admin rights.
 
 ## Prerequisites
 
 - macOS on arm64, or Linux (glibc, or musl like Alpine) on x86_64 or arm64
-- `curl` (or `wget`, `python3`, or `/usr/lib/apt/apt-helper` on Debian/Ubuntu), `tar`, and CA certificates
-  for them (`git` is installed from prebuilt binaries if missing)
+- `curl` (or `wget`, `python3`, or `/usr/lib/apt/apt-helper` on Debian/Ubuntu) and `tar`
+  (`git` is installed from prebuilt binaries if missing)
 - `zsh` (installed to `~/.local` with [zsh-bin](https://github.com/romkatv/zsh-bin) if missing)
 
-On minimal environments lacking `sudo`, `curl`, and `wget`, `zshsetup` falls back to system `python3` or `/usr/lib/apt/apt-helper` to automatically bootstrap a static `curl` binary into `~/.local/bin`.
+pmg runs with [uv](https://github.com/astral-sh/uv). Without a `uv` in `PATH`, `packages/pmg`
+downloads one into `~/.cache/zshsetup/uv` with any of the tools above and checks its SHA-256. uv
+brings the Python for pmg, and pmg its own CA certificates, so no system certificates are needed.
 
 ## Installation
 
@@ -41,10 +43,11 @@ python3 <(curl -fsSL https://gist.githubusercontent.com/muendelezaji/c14722ab66b
 
 ## Usage
 
-- `update_zshsetup` pulls the latest version, upgrades manually installed packages, and
-  updates oh-my-zsh.
-- `install_manual <package>...` installs manually packaged tools.
-- `uninstall_manual <package>...` removes manually installed packages.
+- `update_zshsetup` pulls the latest version, updates the specs of pmg, upgrades the packages of
+  pmg, and updates oh-my-zsh.
+- `install_manual <package>...` installs packages with pmg, `uninstall_manual <package>...` removes
+  them.
+- `pmg` is in `PATH` with completions, e.g. `pmg list`, `pmg use bat@v0.25.0`, or `pmg --help`.
 - `edit_zshsetup <pre|post>` edits local configuration files with `$EDITOR` (or `micro`).
 - `showhist` prints the history with readable timestamps.
 - Local changes belong in `preinit.zsh` (before tools and oh-my-zsh) and `postinit.zsh` (after tools and oh-my-zsh).
@@ -56,53 +59,27 @@ Installed by default (besides `zsh` and `git` from the installer): `oh-my-zsh`, 
 Add others with `ZSHSETUP_REQUIRE_<PACKAGE>`, or skip defaults with `ZSHSETUP_DISABLE_<PACKAGE>`;
 dependencies of installed packages are installed either way.
 
-The following packages have bootstrap scripts in `packages/`. All of them download with `curl`,
-which is installed first if missing:
-
-- `bat`: `cat` clone with syntax highlighting and Git integration (requires `jq`)
-- `bun`: Fast all-in-one JavaScript/TypeScript runtime and toolkit (requires `jq`, `python3`, and `patchelf`, `musl-libs` on musl)
-- `curl`: Command-line tool for transferring data with URLs (requires `jq`, `python3`)
-- `gawk`: GNU Awk text processing utility (requires `make`, `zig`, `python3`)
-- `git`: Distributed version control system (requires `jq`)
-- `glibc`: User-space glibc for musl hosts, from conda-forge's sysroot (requires `jq`, `python3`, `zstd`)
-- `go`: The Go programming language toolchain
-- `jq`: Command-line JSON processor
-- `kv`: Key-value storage CLI (requires `jq`, and `musl`, `patchelf` on older glibc)
-- `make`: GNU Make build automation tool (requires `zig`)
-- `micro`: Modern terminal-based text editor (requires `jq`)
-- `micromamba`: Fast standalone conda package manager (requires `jq`, and `glibc`, `patchelf` on musl)
-- `musl`: User-space musl for glibc hosts, from Alpine's package
-- `musl-libs`: GCC's `libstdc++` and `libgcc_s` for musl, from Alpine's packages (requires `patchelf`)
-- `oh-my-zsh`: Community-driven zsh configuration framework (requires `git`, `zsh`)
-- `patchelf`: Modifies the loader and RPATH of ELF binaries (Linux only)
-- `python3`: Python programming language interpreter (requires `uv`)
-- `rustup`: Rust toolchain installer (requires `jq`, `zig` without a `cc`, and `musl-libs` on musl)
-- `uv`: Fast Python package and project manager (requires `jq`)
-- `uvc`: Python command wrapper and cache tool (requires `python3`)
-- `zig`: Zig compiler and toolchain (requires `python3`)
-- `zstd`: Zstandard compression tool (requires `make`, `zig`)
+The specs of pmg for `bat`, `kv`, `micro`, and `uvc` are in `packages/specs/`, all others in
+[pmg-specs](https://github.com/audivir/pmg-specs): `bun`, `cc` (a C compiler through zig), `curl`,
+`gawk`, `git`, `glibc`, `go`, `jq`, `make`, `micromamba`, `musl`, `musl-libs`, `patchelf`,
+`rustup`, `uv`, `zig`, and `zstd`. pmg installs dependencies like `cc` for `rustup` or `musl-libs`
+for `bun` on musl, and skips those the system already has.
 
 ## Platform Notes
 
 - musl (Alpine): `micromamba` is skipped, since it and all conda-forge packages need glibc.
   With `ZSHSETUP_REQUIRE_MICROMAMBA`, it runs with conda-forge's glibc, and a wrapper
   patches new environments with `patchelf`; it also handles `micromamba run` (with `-n`/`-p`).
-- musl: `make` and `gawk` are built statically, as zig misaligns `environ` when linking musl
-  dynamically on aarch64.
-- Rust links with `cc`; without one (bare Linux, macOS without developer tools), `rustup` puts a
-  zig `cc` wrapper into `~/.local/share/rustup-cc`, which `.zshrc` only uses if the system has no `cc`.
+- Rust links with `cc`; without one (bare Linux, macOS without developer tools), pmg installs `cc`,
+  a wrapper around zig.
 - macOS without developer tools: the stubs in `/usr/bin` (`git`, `make`, `cc`, `python3`, ...) only
   offer to install them, so they count as missing and the packages are installed instead.
 - musl: Rust toolchains need `libgcc_s` and `bun` needs `libstdc++`; without them on the system,
-  the `musl-libs` package takes them from Alpine's packages (with `packages/musl/apk-extract`,
-  without `apk` or root). `bun` finds them through its RUNPATH, Rust through `LD_LIBRARY_PATH`.
+  the `musl-libs` package takes them from Alpine's packages, without `apk` or root. `bun` finds
+  them through its RUNPATH, Rust through `LD_LIBRARY_PATH`.
 - Old glibc (CentOS 7, RHEL 8): `uv` (glibc 2.28) and `bat` (2.18) use their static musl builds
-  where the system cannot run the gnu builds, and zig builds for the system's glibc. `kv` (2.39 and
-  `libmvec`) uses its dynamic musl build, as it loads pdfium at runtime, with the `musl` package's
-  loader set by `patchelf`.
-- Without `curl`: the static `curl` is bootstrapped with `wget`, `python3`, or `apt-helper`
-  (bare Debian/Ubuntu, without TLS verification) and checked against pinned SHA-256 hashes.
-  Its musl build is used on all Linux, as the glibc one crashes on older glibc (CentOS 7).
+  where the system cannot run the gnu builds. `kv` (2.39) uses its dynamic musl build, as it loads
+  pdfium at runtime, with the loader of the `musl` package set by `patchelf`.
 - Without system CA certificates, `GIT_SSL_CAPATH` and `MAMBA_SSL_VERIFY` point `git` and
   `micromamba` at the Mozilla certificates bundled with [git-static](https://github.com/audivir/git-static).
 - A failed install is skipped for a day (see `failed/`); retry with `install_manual <package>`.
@@ -112,7 +89,8 @@ which is installed first if missing:
 Set them already for the installation (e.g. `ZSHSETUP_CHOICE=manual sh`), the installer saves
 them to `preinit.zsh` for later shells.
 
-- `ZSHSETUP_CHOICE`: default package manager (`brew`, `apt`, or `manual`) instead of the menu.
+- `ZSHSETUP_CHOICE`: default package manager (`brew`, `apt`, `apk`, or `manual` for pmg) instead of
+  the menu.
 - `ZSHSETUP_CHOICE_<PACKAGE>`: package manager for a single package (e.g. `ZSHSETUP_CHOICE_CURL=apt`),
   overriding `ZSHSETUP_CHOICE`.
 - `ZSHSETUP_IGNORESCRATCH`: do not move the cache directory to `/scratch/$USER/.cache`.
@@ -123,7 +101,7 @@ them to `preinit.zsh` for later shells.
   it is still installed when another package depends on it.
 - `ZSHSETUP_GH_TOKEN`: GitHub token for API requests, which are limited to 60 per hour without.
   It is not saved to `preinit.zsh`.
-- `ZSHSETUP_RUST_TOOLCHAIN`: default toolchain for a manual `rustup` install (`stable` if unset).
+- `ZSHSETUP_RUST_TOOLCHAIN`: default toolchain for the `rustup` install of pmg (`stable` if unset).
 
 ## Testing
 
@@ -131,7 +109,7 @@ them to `preinit.zsh` for later shells.
 Debian, Ubuntu, Rocky Linux 8), or with `--native` on the current machine with a temporary `HOME`:
 `env` (settings and choices), `packages`, `choices` (apt), `lifecycle` (upgrade, uninstall),
 `shell` (a full installation from the working tree), and the slow `musl` (micromamba, Rust, bun) and
-`all` (every package through a shell start).
+`all` (every package through a shell start). pmg has its own tests in `pmg/tests/`.
 Set `ZSHSETUP_GH_TOKEN` to avoid GitHub's API rate limit.
 
 ## License

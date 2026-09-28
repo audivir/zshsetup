@@ -35,10 +35,77 @@ __assure_dir() {
   mkdir -p "$dir_to_check" || __eprint "$dir_to_check not found and not creatable"
 }
 
+# installs a package with the manager from ZSHSETUP_CHOICE_<PACKAGE>, ZSHSETUP_CHOICE, or a menu
+# manual installs with pmg, brew and apt/apk with the names from the spec of the package
+# shellcheck disable=SC2206,SC2296,SC2299
 __package_manager() {
-  local package
+  local package choice choice_var manager name postinstall
+  local -a options sudo
+  local -A names
   package="$1"
-  "$ZSHSETUP_HOME/packages/$package.sh" package
+  while read -r manager name; do
+    names[$manager]="$name"
+  done < <(pmg external "$package" 2>/dev/null)
+  options=()
+  if [[ "$OSTYPE" == darwin* ]]; then
+    [ -n "${names[brew]}" ] && __available brew && options+=(brew)
+  else
+    [ -n "${names[apt]}" ] && __available apt-get && options+=(apt)
+    [ -n "${names[apk]}" ] && __available apk && options+=(apk)
+  fi
+  options+=(manual)
+
+  echo "Install $package via:" >&2
+  choice_var="ZSHSETUP_CHOICE_${${package:u}//-/_}"
+  choice="${(P)choice_var:-${ZSHSETUP_CHOICE:-}}"
+  if [ -n "$choice" ]; then
+    # an unavailable choice (e.g. apt on macOS) falls back to manual
+    ((${options[(Ie)$choice]})) || choice="manual"
+  elif { : </dev/tty; } 2>/dev/null; then
+    PS3="choice: "
+    select choice in "${options[@]}"; do
+      [ -n "$choice" ] && break
+    done </dev/tty >/dev/tty 2>&1
+  fi
+  if [ -z "$choice" ]; then
+    __eprint "No install choice for $package, set ZSHSETUP_CHOICE or $choice_var"
+    return 1
+  fi
+  echo "$choice" >&2
+
+  sudo=()
+  [ "$(id -u)" -eq 0 ] || sudo=(sudo)
+  case "$choice" in
+    manual)
+      pmg install "$package" || return 1
+      ;;
+    brew)
+      NONINTERACTIVE=1 brew install "${names[brew]}" || return 1
+      ;;
+    apt)
+      # fresh systems and containers have no package lists yet
+      # a spec may list several apt packages, e.g. "curl ca-certificates"
+      if ! DEBIAN_FRONTEND=noninteractive "${sudo[@]}" apt-get install --no-install-recommends --yes ${=names[apt]}; then
+        "${sudo[@]}" apt-get update \
+          && DEBIAN_FRONTEND=noninteractive "${sudo[@]}" apt-get install --no-install-recommends --yes ${=names[apt]} \
+          || return 1
+      fi
+      postinstall="$ZSHSETUP_HOME/packages/apt/${names[apt]%% *}.sh"
+      ;;
+    apk)
+      "${sudo[@]}" apk add ${=names[apk]} || return 1
+      ;;
+  esac
+  if [ -n "$postinstall" ] && [ -f "$postinstall" ]; then
+    "$postinstall" || return 1
+  fi
+}
+
+# checks whether pmg installed a package, for packages without a command, like glibc
+__pmg_installed() {
+  local -a records
+  records=("${PMG_HOME:-$XDG_DATA_HOME/pmg}/installed/$1"@*.json(N))
+  ((${#records}))
 }
 
 # installs a missing tool, warns instead of aborting and skips a failed install for a day
@@ -51,8 +118,7 @@ __require() {
   disable_var="ZSHSETUP_DISABLE_${${package:u}//-/_}"
   __available "$package" && return 0
   [ -n "${(P)disable_var}" ] && return 1
-  # packages without a command, like glibc
-  [ -n "$("$ZSHSETUP_HOME/packages/$package.sh" check 2>/dev/null)" ] && return 0
+  __pmg_installed "$package" && return 0
   # the marker holds the time of the failure
   local failed_at
   zmodload zsh/datetime
@@ -63,9 +129,9 @@ __require() {
     esac
     ((EPOCHSECONDS - failed_at < 86400)) && return 1
   fi
-  if __package_manager "$package" \
-    && rehash \
-    && { __available "$package" || [ -n "$("$ZSHSETUP_HOME/packages/$package.sh" check 2>/dev/null)" ]; }; then
+  # rehash, as zsh would otherwise keep running a command it found before
+  if __package_manager "$package" && rehash && { __available "$package" || __pmg_installed "$package"; }; then
+    . "${PMG_HOME:-$XDG_DATA_HOME/pmg}/env.sh" 2>/dev/null
     rm -f "$marker"
     return 0
   fi
@@ -157,8 +223,10 @@ __init_zshsetup_env() {
   export MPLCONFIGDIR="$XDG_CONFIG_HOME/matplotlib"
   export PYTHON_HISTORY="$XDG_DATA_HOME/python/python_history"
   # without system certificates, git and micromamba use the ones bundled with git-static
-  if [ ! -e /etc/ssl/cert.pem ] && [ -z "$(ls -A /etc/ssl/certs 2>/dev/null)" ]; then
-    export GIT_SSL_CAPATH="$LOCAL_HOME/share/git-core/certs"
+  local -a git_certs
+  git_certs=("$XDG_DATA_HOME"/git@*/share/git-core/certs(N[-1]))
+  if [ ! -e /etc/ssl/cert.pem ] && [ -z "$(ls -A /etc/ssl/certs 2>/dev/null)" ] && ((${#git_certs})); then
+    export GIT_SSL_CAPATH="${git_certs[1]}"
     export MAMBA_SSL_VERIFY="$GIT_SSL_CAPATH/cacert.pem"
   fi
 }
@@ -169,9 +237,26 @@ __init_zshsetup() {
 
   local dir
   for dir in "$LOCAL_HOME" "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_BIN_HOME" "$XDG_CACHE_HOME" "$XDG_STATE_HOME" \
-    "$ZSHSETUP_HOME/bin" "$ZSHSETUP_HOME/versions"; do
+    "$ZSHSETUP_HOME/bin"; do
     __assure_dir "$dir" || return 1
   done
+
+  # BEGIN PMG
+  # pmg installs the packages, see packages/pmg; completions call it by name, so it is linked into PATH
+  __assure_link "$ZSHSETUP_HOME/bin/pmg" "$ZSHSETUP_HOME/packages/pmg" || return 1
+  # the completions pmg installs, and those of pmg itself, before oh-my-zsh runs compinit
+  fpath=("$XDG_DATA_HOME/zsh/site-functions" "$ZSHSETUP_HOME/completions" "${fpath[@]}")
+  # mandoc (Alpine) does not find man pages next to the bin dirs in PATH, the trailing colon keeps the defaults
+  export MANPATH="$XDG_DATA_HOME/man:"
+  # the environment and PATH entries of packages like go and rustup
+  [ -f "${PMG_HOME:-$XDG_DATA_HOME/pmg}/env.sh" ] && . "${PMG_HOME:-$XDG_DATA_HOME/pmg}/env.sh"
+  # END PMG
+
+  # BEGIN CURL AND GIT
+  # oh-my-zsh installs with both
+  __require curl
+  __require git
+  # END CURL AND GIT
 
   # BEGIN OH-MY-ZSH
   if [ ! -d "$ZSH" ]; then
@@ -187,10 +272,6 @@ __init_zshsetup() {
     __source /opt/homebrew/bin/brew shellenv || return 1
     alias homebrewupdate='brew update; brew upgrade --formulae --yes && brew cu --yes && cd /opt/homebrew && git stash pop &>/dev/null || true && cd -'
   fi
-  # BEGIN CURL
-  __require curl
-  # END CURL
-
   # BEGIN PYTHON
   __require uv
   if __require uvc; then
@@ -212,11 +293,12 @@ __init_zshsetup() {
     && __require micromamba; then
     alias conda='micromamba'
     export MAMBA_ROOT_PREFIX="$XDG_DATA_HOME/micromamba"
-    if [ -d "$XDG_DATA_HOME/micromamba-musl" ]; then
-      # the hook calls the real binary by path, but the wrapper also patches new programs for glibc
-      local hook real_exe
-      real_exe="$XDG_DATA_HOME/micromamba-musl/micromamba"
-      hook="$(command micromamba shell hook --shell zsh)" && eval "${hook//$real_exe/$XDG_BIN_HOME/micromamba}"
+    local -a real_exe
+    real_exe=("$XDG_DATA_HOME"/micromamba@*/micromamba(N[-1]))
+    if ((${#real_exe})); then
+      # on musl, the hook calls the real binary by path, but the wrapper also patches new programs for glibc
+      local hook
+      hook="$(command micromamba shell hook --shell zsh)" && eval "${hook//${real_exe[1]}/$XDG_BIN_HOME/micromamba}"
     else
       __source command micromamba shell hook --shell zsh
     fi
@@ -224,40 +306,37 @@ __init_zshsetup() {
   # END MICROMAMBA
 
   # BEGIN GO
-  PATH="$XDG_DATA_HOME/go/bin:$XDG_DATA_HOME/golang/bin:$PATH"
+  # for go from other package managers, pmg sets GOROOT, GOPATH, and PATH in its env file
+  export GOPATH="${GOPATH:-$XDG_DATA_HOME/go}"
+  PATH="$GOPATH/bin:$PATH"
   __require go
-  if [ -d "$XDG_DATA_HOME/golang" ]; then
-    export GOROOT="$XDG_DATA_HOME/golang"
-  fi
-  export GOPATH="$XDG_DATA_HOME/go"
   # END GO
 
   # BEGIN RUST
-  PATH="$XDG_DATA_HOME/cargo/bin:/opt/homebrew/opt/rustup/bin:$PATH"
-  export RUSTUP_HOME="$XDG_DATA_HOME/rustup"
-  export CARGO_HOME="$XDG_DATA_HOME/cargo"
+  # for rustup from other package managers, pmg sets RUSTUP_HOME, CARGO_HOME, and PATH in its env file
+  export RUSTUP_HOME="${RUSTUP_HOME:-$XDG_DATA_HOME/rustup}"
+  export CARGO_HOME="${CARGO_HOME:-$XDG_DATA_HOME/cargo}"
+  PATH="$CARGO_HOME/bin:/opt/homebrew/opt/rustup/bin:$PATH"
   __require rustup
-  # see install_cc_support in packages/rustup.sh
-  if [ -d "$XDG_DATA_HOME/rustup-cc" ]; then
-    __available cc || PATH="$XDG_DATA_HOME/rustup-cc/bin:$PATH"
-    [ -e "/lib/ld-musl-$(uname -m).so.1" ] \
-      && export "CARGO_TARGET_$(uname -m | tr '[:lower:]' '[:upper:]')_UNKNOWN_LINUX_MUSL_RUSTFLAGS=-C link-self-contained=no"
+  # the cc of pmg is zig, which links musl programs itself
+  if [[ "$(whence -p cc)" == "$XDG_BIN_HOME/cc" ]] && [ -e "/lib/ld-musl-$(uname -m).so.1" ]; then
+    export "CARGO_TARGET_$(uname -m | tr '[:lower:]' '[:upper:]')_UNKNOWN_LINUX_MUSL_RUSTFLAGS=-C link-self-contained=no"
   fi
   # musl toolchains need libgcc_s
-  if [ -d "$XDG_DATA_HOME/musl-libs" ] && [ ! -e /usr/lib/libgcc_s.so.1 ]; then
-    export LD_LIBRARY_PATH="$XDG_DATA_HOME/musl-libs/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+  local -a musl_libs
+  musl_libs=("$XDG_DATA_HOME"/musl-libs@*/usr/lib(N[-1]))
+  if ((${#musl_libs})) && [ ! -e /usr/lib/libgcc_s.so.1 ]; then
+    export LD_LIBRARY_PATH="${musl_libs[1]}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
   fi
   # END RUST
 
   # BEGIN REQUIRED PACKAGES
   # non-default packages from ZSHSETUP_REQUIRE_<PACKAGE>, e.g. ZSHSETUP_REQUIRE_ZIG
-  local package required_var packages
-  . "$ZSHSETUP_HOME/packages/packages.sh"
-  for package in "${packages[@]}"; do
+  local required_var
+  # shellcheck disable=SC2296
+  for required_var in ${(k)parameters[(I)ZSHSETUP_REQUIRE_*]}; do
     # shellcheck disable=SC2296,SC2299
-    required_var="ZSHSETUP_REQUIRE_${${package:u}//-/_}"
-    # shellcheck disable=SC2296
-    [ -n "${(P)required_var}" ] && __require "$package"
+    [ -n "${(P)required_var}" ] && __require "${${${required_var#ZSHSETUP_REQUIRE_}:l}//_/-}"
   done
   # END REQUIRED PACKAGES
 
@@ -357,11 +436,8 @@ update_zshsetup() {
 
   rm -rf "$ZSHSETUP_HOME/failed"
 
-  local packages
-  . "$ZSHSETUP_HOME/packages/packages.sh"
-  for p in "${packages[@]}"; do
-    "$ZSHSETUP_HOME/packages/$p.sh" upgrade
-  done
+  pmg update || __eprint "Failed to update the specs of pmg"
+  pmg upgrade || __eprint "Failed to upgrade the packages of pmg"
 
   # omz only exists once oh-my-zsh is sourced, so run its upgrade script directly
   local omz_dir omz_cache
@@ -374,20 +450,18 @@ update_zshsetup() {
   mkdir -p "$omz_cache" && echo "LAST_EPOCH=$((EPOCHSECONDS / 60 / 60 / 24))" >|"$omz_cache/.zsh-update"
 }
 
-# installs manually packaged tools
+# installs packages with pmg, see pmg --help for all its commands
 install_manual() {
+  local p
   for p in "$@"; do
     rm -f "$ZSHSETUP_HOME/failed/$p"
-    "$ZSHSETUP_HOME/packages/$p.sh" install || __eprint "Failed to install $p"
   done
+  pmg install "$@" && rehash
 }
 
-# uninstalls a single package
+# uninstalls packages with pmg
 uninstall_manual() {
-  for p in "$@"; do
-    rm -f "$ZSHSETUP_HOME/failed/$p"
-    "$ZSHSETUP_HOME/packages/$p.sh" uninstall || __eprint "Failed to uninstall $p"
-  done
+  pmg uninstall "$@" && rehash
 }
 
 # edits pre- or post-init files with $EDITOR or micro
@@ -455,5 +529,5 @@ fi
 . "$ZSHSETUP_HOME/postinit.zsh" || return 1
 
 # CLEANUP
-unfunction __assure_link __assure_dir __package_manager __require __source __available
+unfunction __assure_link __assure_dir __package_manager __pmg_installed __require __source __available
 unfunction __init_cache __init_zshsetup_env __init_zshsetup __install_zshsetup __save_settings

@@ -1,0 +1,70 @@
+#!/bin/sh
+# runs pmg from the zshsetup checkout, with the uv from PATH or one bootstrapped into the cache
+set -eu
+
+zshsetup_home="${ZSHSETUP_HOME:-$HOME/.config/zshsetup}"
+
+# prints a URL with curl, wget, python3, or apt-helper, whichever exists
+download() {
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "$1"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -q -O - "$1"
+  elif command -v python3 >/dev/null 2>&1; then
+    python3 -c 'import shutil, sys, urllib.request
+shutil.copyfileobj(urllib.request.urlopen(sys.argv[1]), sys.stdout.buffer)' "$1"
+  elif [ -x /usr/lib/apt/apt-helper ]; then
+    # without CA certificates, the checksum below still guards the download
+    file="$(mktemp)"
+    /usr/lib/apt/apt-helper -o Acquire::https::Verify-Peer=false download-file "$1" "$file" >/dev/null
+    cat "$file"
+    rm -f "$file"
+  else
+    echo "pmg: curl, wget, python3, or apt-helper required to bootstrap uv" >&2
+    return 1
+  fi
+}
+
+# installs the latest uv into $1, checked against the sha256 uv publishes
+bootstrap_uv() {
+  case "$(uname -s)-$(uname -m)" in
+    Linux-x86_64) asset="uv-x86_64-unknown-linux-musl.tar.gz" ;;
+    Linux-aarch64) asset="uv-aarch64-unknown-linux-musl.tar.gz" ;;
+    Darwin-arm64) asset="uv-aarch64-apple-darwin.tar.gz" ;;
+    *)
+      echo "pmg: no uv for $(uname -s) $(uname -m)" >&2
+      return 1
+      ;;
+  esac
+  url="https://github.com/astral-sh/uv/releases/latest/download/$asset"
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "$tmp"' EXIT
+  download "$url" >"$tmp/$asset"
+  expected="$(download "$url.sha256" | cut -d ' ' -f 1)"
+  if command -v sha256sum >/dev/null 2>&1; then
+    actual="$(sha256sum "$tmp/$asset" | cut -d ' ' -f 1)"
+  else
+    actual="$(shasum -a 256 "$tmp/$asset" | cut -d ' ' -f 1)"
+  fi
+  if [ "$actual" != "$expected" ]; then
+    echo "pmg: sha256 mismatch for $url" >&2
+    return 1
+  fi
+  tar -xzf "$tmp/$asset" -C "$tmp"
+  mkdir -p "$1"
+  mv "$tmp/${asset%.tar.gz}/uv" "$1/uv"
+  rm -rf "$tmp"
+  trap - EXIT
+}
+
+uv="$(command -v uv 2>/dev/null || true)"
+if [ -z "$uv" ]; then
+  uv_dir="${XDG_CACHE_HOME:-$HOME/.cache}/zshsetup/uv"
+  uv="$uv_dir/uv"
+  [ -x "$uv" ] || bootstrap_uv "$uv_dir"
+fi
+
+export PMG_SPECS_DIR="${PMG_SPECS_DIR:-$zshsetup_home/packages/specs}"
+export PMG_GH_TOKEN="${PMG_GH_TOKEN:-${ZSHSETUP_GH_TOKEN:-}}"
+export PMG_RUST_TOOLCHAIN="${PMG_RUST_TOOLCHAIN:-${ZSHSETUP_RUST_TOOLCHAIN:-}}"
+exec "$uv" run --quiet --project "$zshsetup_home/pmg" python -m pmg "$@"

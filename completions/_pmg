@@ -1,0 +1,3 @@
+#compdef pmg
+# asks pmg for the completions, like `_PMG_COMPLETE=source_zsh pmg` prints, but autoloadable
+eval $(env _TYPER_COMPLETE_ARGS="${words[1,$CURRENT]}" _PMG_COMPLETE=complete_zsh pmg)

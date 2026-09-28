@@ -33,8 +33,8 @@ check "make runs" contains "$out" "make: GNU Make"
 check "gawk runs" contains "$out" "gawk: GNU Awk"
 check "bun runs" contains "$out" "bun: 2,4"
 if [ ! -e /usr/lib/libstdc++.so.6 ]; then
-  check "bun's libstdc++ comes from musl-libs" test -e "$XDG_DATA_HOME/musl-libs/lib/libstdc++.so.6"
+  check "bun's libstdc++ comes from musl-libs" sh -c "ls '$XDG_DATA_HOME'/musl-libs@*/usr/lib/libstdc++.so.6"
 fi
-check "uninstalling bun keeps musl-libs for Rust" sh -c "'$ZSHSETUP_HOME/packages/bun.sh' uninstall && test -e '$XDG_DATA_HOME/musl-libs/version'"
+check "uninstalling bun keeps musl-libs for Rust" sh -c "pmg uninstall bun && ls -d '$XDG_DATA_HOME'/musl-libs@*"
 
 finish

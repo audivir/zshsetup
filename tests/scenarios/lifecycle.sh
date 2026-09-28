@@ -1,19 +1,17 @@
 #!/bin/sh
-# install, upgrade without changes, and uninstall of manual packages
+# install, upgrade without changes, and uninstall with pmg
 . "${ZSHSETUP_TEST_REPO:-/zshsetup}/tests/lib.sh"
 setup_zshsetup
-export ZSHSETUP_CHOICE=manual
 
 for p in bat micro uv git; do
-  script="$ZSHSETUP_HOME/packages/$p.sh"
-  check "$p installs" "$script" install
-  out="$("$script" upgrade 2>&1)"
-  check "$p upgrade keeps the current version" lacks "$out" "Upgrading"
-  check "$p uninstalls" "$script" uninstall
+  check "$p installs" pmg install "$p"
+  out="$(pmg upgrade "$p" 2>&1)"
+  check "$p upgrade keeps the current version" contains "$out" "is up to date"
+  check "$p uninstalls" pmg uninstall "$p"
   check "$p is gone" test ! -e "$XDG_BIN_HOME/$p"
 done
-check "git uninstall removes libexec/git-core" test ! -e "$HOME/.local/libexec/git-core"
-out="$("$ZSHSETUP_HOME/packages/micro.sh" upgrade 2>&1)"
-check "upgrading a package that is not installed manually is a no-op" contains "$out" "not installed manually"
+check "git uninstall removes its package dir" sh -c "! ls -d '$XDG_DATA_HOME'/git@* 2>/dev/null"
+out="$(pmg upgrade micro 2>&1)"
+check "upgrading a package that is not installed is a no-op" test -z "$out"
 
 finish

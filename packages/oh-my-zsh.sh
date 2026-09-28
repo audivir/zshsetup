@@ -1,9 +1,6 @@
-#!/usr/bin/env zsh
-# shellcheck shell=bash
-set -euo pipefail
+#!/bin/sh
+# installs oh-my-zsh into $ZSH, keeping .zshrc; .zshrc requires curl and git before
+set -eu
 
-. "$ZSHSETUP_HOME/packages/helper.sh"
-
-require_cmd zsh git curl || return 1
 url="https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh"
 curl -fsSL "$url" | sh -s -- --unattended --keep-zshrc

@@ -81,9 +81,10 @@ fi
 if ! __available git --version; then
   snapshot="$(mktemp -d)"
   mkdir -p "$HOME/.local/bin" "$HOME/.local/share"
+  # pmg from a snapshot of zshsetup installs git, which then clones zshsetup
   if ! __download https://github.com/audivir/zshsetup/archive/refs/heads/main.tar.gz | tar -xzC "$snapshot" \
     || ! ZSHSETUP_HOME="$snapshot/zshsetup-main" XDG_BIN_HOME="$HOME/.local/bin" XDG_DATA_HOME="$HOME/.local/share" \
-      zsh "$snapshot/zshsetup-main/packages/git.sh" package; then
+      sh "$snapshot/zshsetup-main/packages/pmg" install git; then
     rm -rf "$snapshot"
     echo "Failed to install git" >&2
     exit 1

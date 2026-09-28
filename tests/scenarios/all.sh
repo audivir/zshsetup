@@ -3,8 +3,8 @@
 . "${ZSHSETUP_TEST_REPO:-/zshsetup}/tests/lib.sh"
 setup_zshsetup
 ln -s "$ZSHSETUP_HOME/.zshrc" "$HOME/.zshrc"
-export ZSHSETUP_CHOICE=manual ZSHSETUP_REQUIRE_ZIG=1 ZSHSETUP_REQUIRE_MAKE=1 ZSHSETUP_REQUIRE_PYTHON3=1 \
-  ZSHSETUP_REQUIRE_ZSTD=1 ZSHSETUP_REQUIRE_MICROMAMBA=1
+export ZSHSETUP_CHOICE=manual ZSHSETUP_REQUIRE_ZIG=1 ZSHSETUP_REQUIRE_MAKE=1 ZSHSETUP_REQUIRE_ZSTD=1 \
+  ZSHSETUP_REQUIRE_MICROMAMBA=1
 is_linux && export ZSHSETUP_REQUIRE_PATCHELF=1
 is_musl && export ZSHSETUP_REQUIRE_GLIBC=1 ZSHSETUP_REQUIRE_MUSL_LIBS=1
 
@@ -26,7 +26,7 @@ run micromamba "micromamba create -q -y -p /tmp/env -c conda-forge python && mic
 run go "go version"
 run rustup "cd \$(mktemp -d) && cargo new -q hello && cd hello && cargo run -q"
 run uv "uv --version"
-run python3 "python3 -c 'import ssl, sqlite3'"
+run python "uv run --no-project python -c 'import ssl, sqlite3'"
 run uvc "uvc --help"
 run bun "bun -e 'console.log(1)'"
 run bat "bat --version"
@@ -34,8 +34,8 @@ run micro "micro --version"
 run kv "kv --version"
 run zstd "zstd --version"
 if is_linux; then
-  is_musl && run glibc "\$XDG_DATA_HOME/glibc/loader --version"
-  is_musl && run musl-libs "test -e \$XDG_DATA_HOME/musl-libs/lib/libgcc_s.so.1"
+  is_musl && run glibc "\$XDG_DATA_HOME/glibc@*/loader --version"
+  is_musl && run musl-libs "test -e \$XDG_DATA_HOME/musl-libs@*/usr/lib/libgcc_s.so.1"
   run patchelf "patchelf --version"
 fi
 
