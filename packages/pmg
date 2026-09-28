@@ -6,7 +6,7 @@ set -eu
 zshsetup_home="${ZSHSETUP_HOME:-$HOME/.config/zshsetup}"
 # the archive of a fixed tag, as uv would need git for a git URL; ZSHSETUP_PMG replaces it, e.g.
 # with a local checkout, which is installed editable
-pmg_tag="v1.1.1"
+pmg_tag="v1.1.2"
 pmg="${ZSHSETUP_PMG:-https://github.com/audivir/pmg/archive/refs/tags/$pmg_tag.tar.gz}"
 venv="${XDG_DATA_HOME:-$HOME/.local/share}/zshsetup/pmg"
 

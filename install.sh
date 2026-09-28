@@ -102,7 +102,7 @@ fi
 
 # pmg at the tag packages/pmg pins, into the directories .zshrc uses; uv checks certificates
 # with its own, so the system needs none
-pmg_tag="v1.1.1"
+pmg_tag="v1.1.2"
 pmg() {
   XDG_BIN_HOME="$HOME/.local/bin" XDG_DATA_HOME="$HOME/.local/share" \
     "$uv" tool run --quiet --from "${ZSHSETUP_PMG:-https://github.com/audivir/pmg/archive/refs/tags/$pmg_tag.tar.gz}" \
