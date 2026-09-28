@@ -1,3 +1,4 @@
+#:schema https://raw.githubusercontent.com/audivir/pmg-specs/main/schema.json
 bin = { micro = "micro" }
 man = ["micro.1"]
 
