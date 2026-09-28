@@ -15,8 +15,9 @@ rights.
 - `sha256sum` (GNU coreutils, BusyBox) or `shasum` (macOS), unless `uv` is in `PATH`
 - `zsh` (installed to `~/.local` with pmg from [zsh-bin](https://github.com/romkatv/zsh-bin) if missing)
 
-`install.sh` and `packages/pmg` run pmg with `uvx`, at the tag they pin. Without a `uv` in
-`PATH`, they download a fixed uv into `~/.cache/zshsetup/uv` with any of the tools above and check
+`install.sh` runs pmg with `uvx`, at the tag `packages/pmg` pins. `packages/pmg` installs that tag
+once into its own venv in `~/.local/share/zshsetup/pmg` and runs it from there, reinstalling it
+when the pin changes. Without a `uv` in `PATH`, both download a fixed uv into `~/.cache/zshsetup/uv` with any of the tools above and check
 its SHA-256: the gnu build on glibc 2.28 or newer, else the static musl build. uv brings the
 Python for pmg, and pmg its own CA certificates, so no system certificates are needed.
 
@@ -106,8 +107,8 @@ them to `preinit.zsh` for later shells.
   without. It is not saved to `preinit.zsh`.
 - `PMG_RUST_TOOLCHAIN`: default toolchain for the `rustup` install of pmg (`stable` if unset).
 - `PMG_SPECS_DIR`: specs of pmg to use instead of `packages/specs/`.
-- `ZSHSETUP_PMG`: pmg to run instead of the pinned tag, as `uvx --from` takes it (e.g. a local
-  checkout).
+- `ZSHSETUP_PMG`: pmg to install instead of the pinned tag, as `uv pip install` takes it; a local
+  checkout is installed editable.
 
 ## Testing
 

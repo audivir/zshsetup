@@ -1,12 +1,22 @@
 #!/bin/sh
-# runs pmg with uvx, with the uv from PATH or one bootstrapped into the cache
+# runs pmg from its own venv, which it installs with the uv from PATH or one bootstrapped into
+# the cache, and reinstalls when the pinned source changes
 set -eu
 
 zshsetup_home="${ZSHSETUP_HOME:-$HOME/.config/zshsetup}"
-# the archive of a fixed tag, as uv would need git for a git URL and ask GitHub for the latest
-# version on every run; ZSHSETUP_PMG replaces it, e.g. with a local checkout
+# the archive of a fixed tag, as uv would need git for a git URL; ZSHSETUP_PMG replaces it, e.g.
+# with a local checkout, which is installed editable
 pmg_tag="v1.1.0"
 pmg="${ZSHSETUP_PMG:-https://github.com/audivir/pmg/archive/refs/tags/$pmg_tag.tar.gz}"
+venv="${XDG_DATA_HOME:-$HOME/.local/share}/zshsetup/pmg"
+
+export PMG_SPECS_DIR="${PMG_SPECS_DIR:-$zshsetup_home/packages/specs}"
+
+# the fast path: the venv has the pinned source, and its python still exists
+# python -m pmg, as the pmg script of uv needs a realpath with --, which BusyBox (Alpine) lacks
+if [ -x "$venv/bin/python" ] && [ "$(cat "$venv/.source" 2>/dev/null)" = "$pmg" ]; then
+  exec "$venv/bin/python" -m pmg "$@"
+fi
 
 # prints a URL with curl, wget, python3, or apt-helper, whichever exists
 download() {
@@ -81,6 +91,13 @@ if [ -z "$uv" ]; then
   [ -x "$uv" ] || bootstrap_uv "$uv_dir"
 fi
 
-export PMG_SPECS_DIR="${PMG_SPECS_DIR:-$zshsetup_home/packages/specs}"
-# python -m pmg, as the pmg script of uv needs a realpath with --, which BusyBox (Alpine) lacks
-exec "$uv" tool run --quiet --from "$pmg" python -m pmg "$@"
+# a Python of uv, as the one of the system may be too old or change with its upgrades; the source
+# is written last, so an interrupted install is redone
+"$uv" venv --quiet --clear --managed-python --python 3.13 "$venv"
+if [ -d "$pmg" ]; then
+  "$uv" pip install --quiet --python "$venv/bin/python" --editable "$pmg"
+else
+  "$uv" pip install --quiet --python "$venv/bin/python" "$pmg"
+fi
+printf '%s\n' "$pmg" >"$venv/.source"
+exec "$venv/bin/python" -m pmg "$@"
