@@ -5,7 +5,7 @@
 # share; zsh sources it with emulate sh, so they keep the semantics of sh
 
 # the tag of pmg that install.sh runs and packages/pmg installs
-__PMG_TAG="v1.3.1"
+__PMG_TAG="v1.3.2"
 
 # prints the path of an executable in PATH without running it, ignoring functions and aliases
 __which() {
