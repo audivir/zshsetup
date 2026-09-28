@@ -85,6 +85,7 @@ __package_manager() {
     apt)
       # fresh systems and containers have no package lists yet
       # a spec may list several apt packages, e.g. "curl ca-certificates"
+      # shellcheck disable=SC2086
       if ! DEBIAN_FRONTEND=noninteractive "${sudo[@]}" apt-get install --no-install-recommends --yes ${=names[apt]}; then
         "${sudo[@]}" apt-get update \
           && DEBIAN_FRONTEND=noninteractive "${sudo[@]}" apt-get install --no-install-recommends --yes ${=names[apt]} \
@@ -93,6 +94,7 @@ __package_manager() {
       postinstall="$ZSHSETUP_HOME/packages/apt/${names[apt]%% *}.sh"
       ;;
     apk)
+      # shellcheck disable=SC2086
       "${sudo[@]}" apk add ${=names[apk]} || return 1
       ;;
   esac
@@ -101,11 +103,18 @@ __package_manager() {
   fi
 }
 
+# prints the last path matching a glob pattern, e.g. the dir of the newest version of a package
+# shellcheck disable=SC2206,SC2296
+__last_match() {
+  setopt local_options null_glob
+  local -a matches
+  matches=(${~1})
+  ((${#matches})) && echo "${matches[-1]}"
+}
+
 # checks whether pmg installed a package, for packages without a command, like glibc
 __pmg_installed() {
-  local -a records
-  records=("${PMG_HOME:-$XDG_DATA_HOME/pmg}/installed/$1"@*.json(N))
-  ((${#records}))
+  [ -n "$(__last_match "${PMG_HOME:-$XDG_DATA_HOME/pmg}/installed/$1@*.json")" ]
 }
 
 # installs a missing tool, warns instead of aborting and skips a failed install for a day
@@ -223,10 +232,10 @@ __init_zshsetup_env() {
   export MPLCONFIGDIR="$XDG_CONFIG_HOME/matplotlib"
   export PYTHON_HISTORY="$XDG_DATA_HOME/python/python_history"
   # without system certificates, git and micromamba use the ones bundled with git-static
-  local -a git_certs
-  git_certs=("$XDG_DATA_HOME"/git@*/share/git-core/certs(N[-1]))
-  if [ ! -e /etc/ssl/cert.pem ] && [ -z "$(ls -A /etc/ssl/certs 2>/dev/null)" ] && ((${#git_certs})); then
-    export GIT_SSL_CAPATH="${git_certs[1]}"
+  local git_certs
+  git_certs="$(__last_match "$XDG_DATA_HOME/git@*/share/git-core/certs")"
+  if [ ! -e /etc/ssl/cert.pem ] && [ -z "$(ls -A /etc/ssl/certs 2>/dev/null)" ] && [ -n "$git_certs" ]; then
+    export GIT_SSL_CAPATH="$git_certs"
     export MAMBA_SSL_VERIFY="$GIT_SSL_CAPATH/cacert.pem"
   fi
 }
@@ -293,12 +302,12 @@ __init_zshsetup() {
     && __require micromamba; then
     alias conda='micromamba'
     export MAMBA_ROOT_PREFIX="$XDG_DATA_HOME/micromamba"
-    local -a real_exe
-    real_exe=("$XDG_DATA_HOME"/micromamba@*/micromamba(N[-1]))
-    if ((${#real_exe})); then
+    local real_exe
+    real_exe="$(__last_match "$XDG_DATA_HOME/micromamba@*/micromamba")"
+    if [ -n "$real_exe" ]; then
       # on musl, the hook calls the real binary by path, but the wrapper also patches new programs for glibc
       local hook
-      hook="$(command micromamba shell hook --shell zsh)" && eval "${hook//${real_exe[1]}/$XDG_BIN_HOME/micromamba}"
+      hook="$(command micromamba shell hook --shell zsh)" && eval "${hook//$real_exe/$XDG_BIN_HOME/micromamba}"
     else
       __source command micromamba shell hook --shell zsh
     fi
@@ -323,10 +332,10 @@ __init_zshsetup() {
     export "CARGO_TARGET_$(uname -m | tr '[:lower:]' '[:upper:]')_UNKNOWN_LINUX_MUSL_RUSTFLAGS=-C link-self-contained=no"
   fi
   # musl toolchains need libgcc_s
-  local -a musl_libs
-  musl_libs=("$XDG_DATA_HOME"/musl-libs@*/usr/lib(N[-1]))
-  if ((${#musl_libs})) && [ ! -e /usr/lib/libgcc_s.so.1 ]; then
-    export LD_LIBRARY_PATH="${musl_libs[1]}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+  local musl_libs
+  musl_libs="$(__last_match "$XDG_DATA_HOME/musl-libs@*/usr/lib")"
+  if [ -n "$musl_libs" ] && [ ! -e /usr/lib/libgcc_s.so.1 ]; then
+    export LD_LIBRARY_PATH="$musl_libs${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
   fi
   # END RUST
 
@@ -529,5 +538,5 @@ fi
 . "$ZSHSETUP_HOME/postinit.zsh" || return 1
 
 # CLEANUP
-unfunction __assure_link __assure_dir __package_manager __pmg_installed __require __source __available
+unfunction __assure_link __assure_dir __package_manager __last_match __pmg_installed __require __source __available
 unfunction __init_cache __init_zshsetup_env __init_zshsetup __install_zshsetup __save_settings
