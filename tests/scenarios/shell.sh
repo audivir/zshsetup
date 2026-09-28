@@ -37,7 +37,9 @@ check "the uv bootstrapped for pmg is gone once uv is installed" test ! -e "$XDG
 check "a failed install leaves a marker" test -e "$home/failed/micro"
 check "a failed install warns" grep -q "installing micro failed" /tmp/install-zshrc.log
 
-# a new shell reads preinit.zsh, skips the failed package, and sets up the tools
+# a new shell reads preinit.zsh, skips the failed package, and sets up the tools; the dir of the
+# completions is missing where pmg never installed a package
+rm -rf "$XDG_DATA_HOME/zsh/site-functions"
 clean_env="HOME=$HOME USER=$USER PATH=/usr/bin:/bin:$XDG_BIN_HOME TERM=dumb PMG_GH_TOKEN=${PMG_GH_TOKEN:-}"
 # shellcheck disable=SC2016,SC2086
 out="$(env -i $clean_env zsh -i -c 'echo "path1=$path[1]"; whence -w uvc; echo "capath=$GIT_SSL_CAPATH"' 2>&1)"
@@ -50,9 +52,17 @@ else
   check "git uses the system certificates" contains "$out" "capath=\$"
 fi
 check "the next shell does not reinstall disabled bun" lacks "$out" "Install bun via"
+check "the next shell writes the completion of pmg" test -s "$XDG_DATA_HOME/zsh/site-functions/_pmg"
+
+# update upgrades with the pulled .zshrc, as the steps of the running shell may be outdated
+awk '{ print } /^__upgrade_zshsetup\(\) \{$/ { print "  touch /tmp/upgraded-by-pulled-zshrc" }' "$src/.zshrc" \
+  >"$src/.zshrc.new"
+mv "$src/.zshrc.new" "$src/.zshrc"
+git -C "$src" -c user.name=test -c user.email=test@test commit -q -am "upgrade marker"
 
 # shellcheck disable=SC2086
 check "zsh ~/.zshrc update succeeds" env -i $clean_env zsh "$HOME/.zshrc" update
 check "update removes the failed markers" test ! -e "$home/failed"
+check "update upgrades with the pulled .zshrc" test -e /tmp/upgraded-by-pulled-zshrc
 
 finish

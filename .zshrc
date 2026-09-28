@@ -224,8 +224,9 @@ __init_zshsetup() {
   __init_cache || return 1
 
   local dir
+  # site-functions for the completion of pmg, which pmg only creates when it installs a package
   for dir in "$LOCAL_HOME" "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_BIN_HOME" "$XDG_CACHE_HOME" "$XDG_STATE_HOME" \
-    "$ZSHSETUP_HOME/bin"; do
+    "$ZSHSETUP_HOME/bin" "$XDG_DATA_HOME/zsh/site-functions"; do
     __assure_dir "$dir" || return 1
   done
 
@@ -428,7 +429,12 @@ update_zshsetup() {
     git fetch || __eprint "Failed to fetch new data from $ZSHSETUP_REPO"
     git merge || __eprint "Failed to merge updates"
   )
+  # the pulled .zshrc upgrades, as the functions of this shell may be from before the pull
+  zsh "$ZSHSETUP_HOME/.zshrc" upgrade
+}
 
+# upgrades the packages of pmg and oh-my-zsh, after update_zshsetup pulled
+__upgrade_zshsetup() {
   rm -rf "$ZSHSETUP_HOME/failed"
 
   pmg update || __eprint "Failed to update the specs of pmg"
@@ -490,8 +496,11 @@ run_zshsetup() {
     update)
       update_zshsetup
       ;;
+    upgrade)
+      __upgrade_zshsetup
+      ;;
     *)
-      __eprint "Usage: run_zshsetup <install|update>"
+      __eprint "Usage: run_zshsetup <install|update|upgrade>"
       return 1
       ;;
   esac
@@ -525,7 +534,7 @@ fi
 
 # CLEANUP
 unfunction __assure_link __assure_dir __package_manager __last_match __pmg_installed __require __source
-unfunction __init_cache __init_zshsetup_env __init_zshsetup __install_zshsetup __save_settings
+unfunction __init_cache __init_zshsetup_env __init_zshsetup __install_zshsetup __save_settings __upgrade_zshsetup
 unfunction __which __available __download __uv_libc __bootstrap_uv __has_metadata __system_install __clean_metadata
 unfunction __install_chosen __install_main
 unset __PMG_TAG __METADATA_CREATED
