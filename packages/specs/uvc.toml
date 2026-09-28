@@ -1,4 +1,4 @@
-#:schema https://raw.githubusercontent.com/audivir/pmg-specs/main/schema.json
+#:schema https://raw.githubusercontent.com/audivir/pmg/main/schema.json
 # uvc has no releases, so the tag is the start of the sha256 of the current script
 deps = ["curl", "uv"]
 bin = { uvc = "{{ asset }}" }

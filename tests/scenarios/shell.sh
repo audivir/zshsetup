@@ -31,6 +31,7 @@ done
 check "ZSHSETUP_REQUIRE_PATCHELF installs patchelf" test -e "$XDG_BIN_HOME/patchelf"
 check "ZSHSETUP_DISABLE_BUN skips bun" test ! -e "$XDG_BIN_HOME/bun"
 check "the pmg command is linked" test -L "$home/bin/pmg"
+check "the completion of pmg is where zsh finds it" test -f "$XDG_DATA_HOME/zsh/site-functions/_pmg"
 check "a failed install leaves a marker" test -e "$home/failed/micro"
 check "a failed install warns" grep -q "installing micro failed" /tmp/install-zshrc.log
 

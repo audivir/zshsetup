@@ -1,4 +1,4 @@
-#:schema https://raw.githubusercontent.com/audivir/pmg-specs/main/schema.json
+#:schema https://raw.githubusercontent.com/audivir/pmg/main/schema.json
 min_glibc = "2.18"
 bin = { bat = "bat" }
 man = ["bat.1"]

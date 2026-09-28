@@ -5,7 +5,7 @@ set -eu
 zshsetup_home="${ZSHSETUP_HOME:-$HOME/.config/zshsetup}"
 # the archive of a fixed commit, as uv would need git for a git URL and ask GitHub for the latest
 # commit on every run; ZSHSETUP_PMG replaces it, e.g. with a local checkout
-pmg_commit="f3a8c81b4f7b0243603f8a73722eb6c106f4dbd6"
+pmg_commit="ee69292bb501f775c5547425b09f923bfed696bb"
 pmg="${ZSHSETUP_PMG:-https://github.com/audivir/pmg/archive/$pmg_commit.tar.gz}"
 
 # prints a URL with curl, wget, python3, or apt-helper, whichever exists

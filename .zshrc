@@ -253,8 +253,10 @@ __init_zshsetup() {
   # BEGIN PMG
   # pmg installs the packages, see packages/pmg; completions call it by name, so it is linked into PATH
   __assure_link "$ZSHSETUP_HOME/bin/pmg" "$ZSHSETUP_HOME/packages/pmg" || return 1
-  # the completions pmg installs, and those of pmg itself, before oh-my-zsh runs compinit
-  fpath=("$XDG_DATA_HOME/zsh/site-functions" "$ZSHSETUP_HOME/completions" "${fpath[@]}")
+  # the completions pmg installs, and that of pmg itself, before oh-my-zsh runs compinit
+  fpath=("$XDG_DATA_HOME/zsh/site-functions" "${fpath[@]}")
+  # pmg writes its completion whenever it changes something, a system without changes gets it here
+  [ -f "$XDG_DATA_HOME/zsh/site-functions/_pmg" ] || pmg completion >"$XDG_DATA_HOME/zsh/site-functions/_pmg"
   # mandoc (Alpine) does not find man pages next to the bin dirs in PATH, the trailing colon keeps the defaults
   export MANPATH="$XDG_DATA_HOME/man:"
   # the environment and PATH entries of packages like go and rustup
