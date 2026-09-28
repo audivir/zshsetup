@@ -1,4 +1,5 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
+# shellcheck shell=bash
 
 update_theme() {
   # locally: detect dark mode
@@ -84,4 +85,4 @@ EOF
 }
 
 __init_theme_viewer
-unset -f __init_theme_viewer
+unfunction __init_theme_viewer
