@@ -163,6 +163,37 @@ __plugin_paths() {
   return 0
 }
 
+# pulls a git clone without asking for credentials, so it can also run in the background
+__pull_quietly() {
+  GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="ssh -o BatchMode=yes" git -C "$1" pull -q --ff-only
+}
+
+# pulls the plugins that are git clones, e.g. of private repositories
+__pull_plugins() {
+  local git_dir plugin
+  __plugin_paths .git
+  for git_dir in "${reply[@]}"; do
+    plugin="${git_dir%/.git}"
+    __pull_quietly "$plugin" || __eprint "Failed to update the plugin ${plugin##*/}"
+  done
+  return 0
+}
+
+# pulls zshsetup and its plugins in the background once a day, so that later shells get their
+# changes; the packages of pmg stay with update_zshsetup
+__pull_daily() {
+  setopt local_options no_monitor no_notify
+  local stamp last
+  stamp="$XDG_STATE_HOME/zshsetup/pulled"
+  zmodload zsh/datetime
+  last="$(cat "$stamp" 2>/dev/null)"
+  ((EPOCHSECONDS - ${last:-0} >= 86400)) || return 0
+  __assure_dir "$XDG_STATE_HOME/zshsetup" || return 0
+  echo "$EPOCHSECONDS" >"$stamp"
+  { __pull_quietly "$ZSHSETUP_HOME" && __pull_plugins; } >/dev/null 2>&1 &
+  return 0
+}
+
 # sources <name>.sh of each plugin in plugins/, a failing plugin only prints an error
 __source_plugins() {
   local file
@@ -467,13 +498,7 @@ update_zshsetup() {
     git fetch || __eprint "Failed to fetch new data from $ZSHSETUP_REPO"
     git merge || __eprint "Failed to merge updates"
   )
-  # plugins are separate git clones in plugins/, e.g. of private repositories
-  local git_dir plugin
-  __plugin_paths .git
-  for git_dir in "${reply[@]}"; do
-    plugin="${git_dir%/.git}"
-    git -C "$plugin" pull --ff-only || __eprint "Failed to update the plugin ${plugin##*/}"
-  done
+  __pull_plugins
   # the pulled .zshrc upgrades, as the functions of this shell may be from before the pull
   zsh "$ZSHSETUP_HOME/.zshrc" upgrade
 }
@@ -591,8 +616,12 @@ if [ ! -f "$ZSHSETUP_HOME/postinit.zsh" ]; then
 fi
 . "$ZSHSETUP_HOME/postinit.zsh" || return 1
 
+# PULL ZSHSETUP AND ITS PLUGINS ONCE A DAY
+__pull_daily
+
 # CLEANUP
 unfunction __assure_link __assure_dir __package_manager __last_match __pmg_installed __require __source __source_plugins
+unfunction __pull_daily
 unfunction __init_cache __init_zshsetup_env __init_zshsetup __install_zshsetup __save_settings __upgrade_zshsetup
 unfunction __which __available __download __uv_libc __bootstrap_uv __has_metadata __system_install __clean_metadata
 unfunction __install_chosen __install_main

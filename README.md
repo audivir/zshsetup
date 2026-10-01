@@ -68,6 +68,8 @@ python3 <(curl -fsSL https://gist.githubusercontent.com/muendelezaji/c14722ab66b
 
 - `update_zshsetup` pulls the latest version, upgrades pmg to its latest tag, updates the specs of
   pmg, upgrades the packages of pmg, and updates oh-my-zsh.
+- Once a day, a shell start pulls zshsetup and its plugins in the background, without asking for
+  credentials; later shells get the changes. The packages of pmg stay with `update_zshsetup`.
 - `install_manual <package>...` installs packages with pmg, `uninstall_manual <package>...` removes
   them.
 - `pmg` is in `PATH` with completions, e.g. `pmg list`, `pmg use bat@v0.25.0`, or `pmg --help`.
