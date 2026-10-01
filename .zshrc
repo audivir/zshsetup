@@ -156,10 +156,23 @@ __source() {
   eval "$env"
 }
 
+# sets reply to the existing <name> of each plugin in plugins/, e.g. bin or preinit.sh
+__plugin_paths() {
+  setopt localoptions nullglob
+  local file
+  reply=()
+  for file in "$ZSHSETUP_HOME"/plugins/*/"$1"; do
+    [ -e "$file" ] && reply+=("$file")
+  done
+  return 0
+}
+
 # sources <name>.sh of each plugin in plugins/, a failing plugin only prints an error
 __source_plugins() {
   local file
-  for file in "$ZSHSETUP_HOME"/plugins/*/"$1".sh(N); do
+  __plugin_paths "$1.sh"
+  for file in "${reply[@]}"; do
+    # shellcheck source=/dev/null
     . "$file" || __eprint "zshsetup: sourcing $file failed"
   done
   return 0
@@ -228,7 +241,8 @@ __init_zshsetup_env() {
   # SETUP PATH
   PATH="$ZSHSETUP_HOME/bin:$XDG_BIN_HOME:$HOME/bin:$PATH"
   # the bin directories of the plugins in plugins/
-  path=("$ZSHSETUP_HOME"/plugins/*/bin(N/) "${path[@]}")
+  __plugin_paths bin
+  path=("${reply[@]}" "${path[@]}")
 
   # SETUP OTHER ENVIRONMENT
   export GNUPGHOME="$XDG_DATA_HOME/gnupg"
@@ -385,7 +399,8 @@ __init_zshsetup() {
 
   # zshsetup's own links (e.g. bat -> batcat) come first, then the bin directories of the plugins
   # typeset -U only deduplicates array assignments, not PATH="...:$PATH"
-  path=("$ZSHSETUP_HOME/bin" "$ZSHSETUP_HOME"/plugins/*/bin(N/) "${path[@]}")
+  __plugin_paths bin
+  path=("$ZSHSETUP_HOME/bin" "${reply[@]}" "${path[@]}")
   export PATH
 
   # BEGIN THEME VIEWER
@@ -457,9 +472,11 @@ update_zshsetup() {
     git merge || __eprint "Failed to merge updates"
   )
   # plugins are separate git clones in plugins/, e.g. of private repositories
-  local plugin
-  for plugin in "$ZSHSETUP_HOME"/plugins/*/.git(N:h); do
-    git -C "$plugin" pull --ff-only || __eprint "Failed to update the plugin ${plugin:t}"
+  local git_dir plugin
+  __plugin_paths .git
+  for git_dir in "${reply[@]}"; do
+    plugin="${git_dir%/.git}"
+    git -C "$plugin" pull --ff-only || __eprint "Failed to update the plugin ${plugin##*/}"
   done
   # the pulled .zshrc upgrades, as the functions of this shell may be from before the pull
   zsh "$ZSHSETUP_HOME/.zshrc" upgrade
