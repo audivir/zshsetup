@@ -1,5 +1,5 @@
 #!/bin/sh
-# per-package choices with apt, the apt postinstall, the fallback to pmg, and the interactive menu
+# per-package choices with apt, the fallback to pmg, and the interactive menu
 . "${ZSHSETUP_TEST_REPO:-/zshsetup}/tests/lib.sh"
 has_apt || skip "choices need apt"
 setup_zshsetup
@@ -21,12 +21,6 @@ check "curl comes from apt" apt_installed curl
 check "ca-certificates come with curl from apt" apt_installed ca-certificates
 check "no pmg curl in \$XDG_BIN_HOME" test ! -e "$XDG_BIN_HOME/curl"
 check "the apt lists downloaded for curl are removed" test -z "$(apt_lists)"
-
-# Debian and Ubuntu name bat batcat, the postinstall links it in zshsetup's bin
-check "bat installs with ZSHSETUP_CHOICE_BAT=apt" env ZSHSETUP_CHOICE_BAT=apt zsh -c "$functions
-__package_manager bat"
-check "bat is linked in \$ZSHSETUP_HOME/bin" test -L "$ZSHSETUP_HOME/bin/bat"
-check "bat runs" bat --version
 
 # apt falls back to pmg for packages without an apt package
 check "uv installs with ZSHSETUP_CHOICE=apt" env ZSHSETUP_CHOICE=apt zsh -c "$functions

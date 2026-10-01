@@ -39,7 +39,7 @@ __assure_dir() {
 # manual installs with pmg, brew and apt/apk with the names from the spec of the package
 # shellcheck disable=SC2206,SC2296,SC2299
 __package_manager() {
-  local package choice choice_var manager name postinstall
+  local package choice choice_var manager name
   local -a options
   local -A names
   package="$1"
@@ -98,10 +98,6 @@ __package_manager() {
     # a spec may list several packages, e.g. "curl ca-certificates"
     # shellcheck disable=SC2086
     __system_install "$choice" ${=names[$choice]} || return 1
-  fi
-  [ "$choice" = apt ] && postinstall="$ZSHSETUP_HOME/packages/apt/${names[apt]%% *}.sh"
-  if [ -n "$postinstall" ] && [ -f "$postinstall" ]; then
-    "$postinstall" || return 1
   fi
 }
 
@@ -397,7 +393,7 @@ __init_zshsetup() {
   alias sb="sudo bat --paging=never --style=plain --tabs=4"
   # END ALIASES
 
-  # zshsetup's own links (e.g. bat -> batcat) come first, then the bin directories of the plugins
+  # zshsetup's own links (e.g. pmg) come first, then the bin directories of the plugins
   # typeset -U only deduplicates array assignments, not PATH="...:$PATH"
   __plugin_paths bin
   path=("$ZSHSETUP_HOME/bin" "${reply[@]}" "${path[@]}")
