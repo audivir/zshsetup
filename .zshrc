@@ -156,6 +156,15 @@ __source() {
   eval "$env"
 }
 
+# sources <name>.sh of each plugin in plugins/, a failing plugin only prints an error
+__source_plugins() {
+  local file
+  for file in "$ZSHSETUP_HOME"/plugins/*/"$1".sh(N); do
+    . "$file" || __eprint "zshsetup: sourcing $file failed"
+  done
+  return 0
+}
+
 __init_cache() {
   local user_cache scratch_cache
   user_cache="$HOME/.cache"
@@ -218,6 +227,8 @@ __init_zshsetup_env() {
 
   # SETUP PATH
   PATH="$ZSHSETUP_HOME/bin:$XDG_BIN_HOME:$HOME/bin:$PATH"
+  # the bin directories of the plugins in plugins/
+  path=("$ZSHSETUP_HOME"/plugins/*/bin(N/) "${path[@]}")
 
   # SETUP OTHER ENVIRONMENT
   export GNUPGHOME="$XDG_DATA_HOME/gnupg"
@@ -372,9 +383,9 @@ __init_zshsetup() {
   alias sb="sudo bat --paging=never --style=plain --tabs=4"
   # END ALIASES
 
-  # zshsetup's own links (e.g. bat -> batcat) come first
+  # zshsetup's own links (e.g. bat -> batcat) come first, then the bin directories of the plugins
   # typeset -U only deduplicates array assignments, not PATH="...:$PATH"
-  path=("$ZSHSETUP_HOME/bin" "${path[@]}")
+  path=("$ZSHSETUP_HOME/bin" "$ZSHSETUP_HOME"/plugins/*/bin(N/) "${path[@]}")
   export PATH
 
   # BEGIN THEME VIEWER
@@ -445,6 +456,11 @@ update_zshsetup() {
     git fetch || __eprint "Failed to fetch new data from $ZSHSETUP_REPO"
     git merge || __eprint "Failed to merge updates"
   )
+  # plugins are separate git clones in plugins/, e.g. of private repositories
+  local plugin
+  for plugin in "$ZSHSETUP_HOME"/plugins/*/.git(N:h); do
+    git -C "$plugin" pull --ff-only || __eprint "Failed to update the plugin ${plugin:t}"
+  done
   # the pulled .zshrc upgrades, as the functions of this shell may be from before the pull
   zsh "$ZSHSETUP_HOME/.zshrc" upgrade
 }
@@ -534,6 +550,8 @@ if [ "$#" -gt 0 ]; then
 fi
 
 # SOURCE PRE-INIT
+# plugins first, so that the local preinit.zsh can override them
+__source_plugins preinit
 if [ ! -f "$ZSHSETUP_HOME/preinit.zsh" ]; then
   printf '#!/usr/bin/env zsh\n# shellcheck shell=bash\n' >"$ZSHSETUP_HOME/preinit.zsh" || return 1
   chmod +x "$ZSHSETUP_HOME/preinit.zsh" || return 1
@@ -544,6 +562,7 @@ fi
 __init_zshsetup || return 1
 
 # SOURCE POST-INIT
+__source_plugins postinit
 if [ ! -f "$ZSHSETUP_HOME/postinit.zsh" ]; then
   printf '#!/usr/bin/env zsh\n# shellcheck shell=bash\n' >"$ZSHSETUP_HOME/postinit.zsh" || return 1
   chmod +x "$ZSHSETUP_HOME/postinit.zsh" || return 1
@@ -551,7 +570,7 @@ fi
 . "$ZSHSETUP_HOME/postinit.zsh" || return 1
 
 # CLEANUP
-unfunction __assure_link __assure_dir __package_manager __last_match __pmg_installed __require __source
+unfunction __assure_link __assure_dir __package_manager __last_match __pmg_installed __require __source __source_plugins
 unfunction __init_cache __init_zshsetup_env __init_zshsetup __install_zshsetup __save_settings __upgrade_zshsetup
 unfunction __which __available __download __uv_libc __bootstrap_uv __has_metadata __system_install __clean_metadata
 unfunction __install_chosen __install_main

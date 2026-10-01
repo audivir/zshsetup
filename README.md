@@ -74,6 +74,10 @@ python3 <(curl -fsSL https://gist.githubusercontent.com/muendelezaji/c14722ab66b
 - `edit_zshsetup <pre|post>` edits local configuration files with `$EDITOR` (or `micro`).
 - `showhist` prints the history with readable timestamps.
 - Local changes belong in `preinit.zsh` (before tools and oh-my-zsh) and `postinit.zsh` (after tools and oh-my-zsh).
+- Plugins are directories in `plugins/` (ignored by git), e.g. a clone of a private repository.
+  Their `bin/` is added to `PATH`, `preinit.sh` is sourced before the local `preinit.zsh`, and
+  `postinit.sh` before the local `postinit.zsh`. `update_zshsetup` pulls plugins that are git
+  clones.
 
 ## Packages
 

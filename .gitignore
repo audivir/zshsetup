@@ -25,3 +25,4 @@ preinit.zsh
 postinit.zsh
 failed/
 /bin/
+/plugins/
