@@ -424,10 +424,11 @@ __init_zshsetup() {
   alias sb="sudo bat --paging=never --style=plain --tabs=4"
   # END ALIASES
 
-  # zshsetup's own links (e.g. pmg) come first, then the bin directories of the plugins
+  # zshsetup's own links (e.g. pmg) come first, then the bin directories of the plugins, then
+  # the commands of pmg in $XDG_BIN_HOME before those of Homebrew and the toolchains
   # typeset -U only deduplicates array assignments, not PATH="...:$PATH"
   __plugin_paths bin
-  path=("$ZSHSETUP_HOME/bin" "${reply[@]}" "${path[@]}")
+  path=("$ZSHSETUP_HOME/bin" "${reply[@]}" "$XDG_BIN_HOME" "${path[@]}")
   export PATH
 
   # BEGIN THEME VIEWER
