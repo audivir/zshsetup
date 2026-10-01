@@ -71,7 +71,8 @@ python3 <(curl -fsSL https://gist.githubusercontent.com/muendelezaji/c14722ab66b
 - `install_manual <package>...` installs packages with pmg, `uninstall_manual <package>...` removes
   them.
 - `pmg` is in `PATH` with completions, e.g. `pmg list`, `pmg use bat@v0.25.0`, or `pmg --help`.
-- `edit_zshsetup <pre|post>` edits local configuration files with `$EDITOR` (or `micro`).
+- `edit_zshsetup <pre|post> [plugin]` edits the local `preinit.zsh` or `postinit.zsh`, or the
+  `preinit.sh` or `postinit.sh` of a plugin, with `$EDITOR` (or `micro`).
 - `showhist` prints the history with readable timestamps.
 - Local changes belong in `preinit.zsh` (before tools and oh-my-zsh) and `postinit.zsh` (after tools and oh-my-zsh).
 - Plugins are directories in `plugins/` (ignored by git), e.g. a clone of a private repository.

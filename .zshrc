@@ -499,21 +499,30 @@ uninstall_manual() {
   pmg uninstall "$@" && rehash
 }
 
-# edits pre- or post-init files with $EDITOR or micro
+# edits the local pre- or post-init file, or that of a plugin, with $EDITOR or micro
 edit_zshsetup() {
-  local target
+  local name target
   case "${1:-pre}" in
     pre)
-      target="$ZSHSETUP_HOME/preinit.zsh"
+      name=preinit
       ;;
     post)
-      target="$ZSHSETUP_HOME/postinit.zsh"
+      name=postinit
       ;;
     *)
-      __eprint "Usage: edit_zshsetup <pre|post>"
+      __eprint "Usage: edit_zshsetup <pre|post> [plugin]"
       return 1
       ;;
   esac
+  if [ -n "$2" ]; then
+    if [ ! -d "$ZSHSETUP_HOME/plugins/$2" ]; then
+      __eprint "No plugin $2 in $ZSHSETUP_HOME/plugins"
+      return 1
+    fi
+    target="$ZSHSETUP_HOME/plugins/$2/$name.sh"
+  else
+    target="$ZSHSETUP_HOME/$name.zsh"
+  fi
   if [ ! -f "$target" ]; then
     printf '#!/usr/bin/env zsh\n# shellcheck shell=bash\n' >"$target" || return 1
     chmod +x "$target" || return 1
