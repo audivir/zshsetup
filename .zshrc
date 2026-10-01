@@ -182,7 +182,6 @@ __pull_plugins() {
 # pulls zshsetup and its plugins in the background once a day, so that later shells get their
 # changes; the packages of pmg stay with update_zshsetup
 __pull_daily() {
-  setopt local_options no_monitor no_notify
   local stamp last
   stamp="$XDG_STATE_HOME/zshsetup/pulled"
   zmodload zsh/datetime
@@ -190,7 +189,8 @@ __pull_daily() {
   ((EPOCHSECONDS - ${last:-0} >= 86400)) || return 0
   __assure_dir "$XDG_STATE_HOME/zshsetup" || return 0
   echo "$EPOCHSECONDS" >"$stamp"
-  { __pull_quietly "$ZSHSETUP_HOME" && __pull_plugins; } >/dev/null 2>&1 &
+  # started from a subshell, so the job table of this shell never reports it as done
+  ({ __pull_quietly "$ZSHSETUP_HOME" && __pull_plugins; } >/dev/null 2>&1 &)
   return 0
 }
 
