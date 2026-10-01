@@ -4,14 +4,16 @@
 setup_env
 export ZSHSETUP_CHOICE=manual
 
-# a git repo of the working tree to install from, with micro failing on purpose
+# a git repo of the working tree to install from, with kv failing on purpose
 src="$(mktemp -d)/zshsetup"
 copy_tree "$src"
 check "git installs for cloning" env ZSHSETUP_HOME="$src" sh "$src/packages/pmg" install git
 # a release that does not exist
-sed 's|^repo = "micro-editor/micro"$|repo = "micro-editor/micro-missing"|' "$src/packages/specs/micro.toml" \
-  >"$src/packages/specs/micro.toml.new"
-mv "$src/packages/specs/micro.toml.new" "$src/packages/specs/micro.toml"
+sed 's|^repo = "audivir/kv"$|repo = "audivir/kv-missing"|' "$src/packages/specs/kv.toml" \
+  >"$src/packages/specs/kv.toml.new"
+mv "$src/packages/specs/kv.toml.new" "$src/packages/specs/kv.toml"
+check "the spec of kv points to a missing release" grep -q '^repo = "audivir/kv-missing"$' \
+  "$src/packages/specs/kv.toml"
 git -C "$src" init -q
 git -C "$src" add -A
 git -C "$src" -c user.name=test -c user.email=test@test commit -q -m test
@@ -42,8 +44,8 @@ check "pmg self-upgrade keeps the latest tag" contains "$("$home/bin/pmg" self-u
 check "pmg runs from its own venv" test -x "$XDG_DATA_HOME/zshsetup/pmg/bin/python"
 check "the completion of pmg is where zsh finds it" test -f "$XDG_DATA_HOME/zsh/site-functions/_pmg"
 check "the uv bootstrapped for pmg is gone once uv is installed" test ! -e "$XDG_CACHE_HOME/zshsetup/uv"
-check "a failed install leaves a marker" test -e "$home/failed/micro"
-check "a failed install warns" grep -q "installing micro failed" /tmp/install-zshrc.log
+check "a failed install leaves a marker" test -e "$home/failed/kv"
+check "a failed install warns" grep -q "installing kv failed" /tmp/install-zshrc.log
 
 # a new shell reads preinit.zsh, skips the failed package, and sets up the tools; the dir of the
 # completions is missing where pmg never installed a package
@@ -51,7 +53,7 @@ rm -rf "$XDG_DATA_HOME/zsh/site-functions"
 clean_env="HOME=$HOME USER=$USER PATH=/usr/bin:/bin:$XDG_BIN_HOME TERM=dumb PMG_GH_TOKEN=${PMG_GH_TOKEN:-}"
 # shellcheck disable=SC2016,SC2086
 out="$(env -i $clean_env zsh -i -c 'echo "path1=$path[1]"; whence -w uvc; echo "capath=$GIT_SSL_CAPATH"' 2>&1)"
-check "the next shell does not retry the failed install" lacks "$out" "Install micro via"
+check "the next shell does not retry the failed install" lacks "$out" "Install kv via"
 check "zshsetup's bin comes first on PATH" contains "$out" "path1=$home/bin"
 check "uvc's shell function is loaded" contains "$out" "uvc: function"
 if [ ! -e /etc/ssl/cert.pem ] && [ -z "$(ls -A /etc/ssl/certs 2>/dev/null)" ]; then
