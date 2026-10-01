@@ -4,6 +4,7 @@ deps = ["curl", "uv"]
 bin = { uvc = "{{ asset }}" }
 check = { cmd = ["uvc", "envs"] }
 
+test = "{{ cmd }} envs"
 [external]
 brew = "uvc"
 
