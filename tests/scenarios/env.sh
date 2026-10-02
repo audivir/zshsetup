@@ -114,8 +114,9 @@ if command -v dnf >/dev/null 2>&1; then
   check "the dnf metadata downloaded for jq is removed" no_metadata
 fi
 
-# an unknown terminal type falls back to xterm-256color, a known or empty one stays
-term_after() { env TERM="$1" zsh -c "$(zshrc_function __fallback_term)
+# an unknown terminal type and plain xterm fall back to xterm-256color, a known or empty one stays
+term_after() { env TERM="$1" zsh -c "$(zshrc_function __has_terminfo)
+$(zshrc_function __fallback_term)
 __fallback_term; print -r -- \"\$TERM\""; }
 check "an unknown TERM falls back to xterm-256color" test "$(term_after zshsetup-unknown)" = xterm-256color
 check "an empty TERM stays empty" test -z "$(term_after "")"
@@ -124,6 +125,23 @@ if [ -n "$(env TERM=dumb zsh -c 'zmodload zsh/terminfo && print -r -- "${terminf
   check "a known TERM stays" test "$(term_after dumb)" = dumb
 else
   echo "  skip  a known TERM stays (no terminfo entry for dumb)"
+fi
+# an entry only in TERMINFO_DIRS, as pmg exports it for ghostty-terminfo, is kept
+entry_dir="$(mktemp -d)"
+for dir in /usr/share/terminfo /lib/terminfo /etc/terminfo; do
+  [ -e "$dir/v/vt100" ] && mkdir -p "$entry_dir/z" && cp "$dir/v/vt100" "$entry_dir/z/zshsetup-term" && break
+done
+if [ -s "$entry_dir/z/zshsetup-term" ]; then
+  check "an entry in TERMINFO_DIRS is kept" test "$(TERMINFO_DIRS="$entry_dir:" term_after zshsetup-term)" = zshsetup-term
+else
+  echo "  skip  an entry in TERMINFO_DIRS is kept (no vt100 entry to copy)"
+fi
+has_xterm_256color="$(zsh -c "$(zshrc_function __has_terminfo)
+__has_terminfo xterm-256color && echo yes")"
+if [ -n "$has_xterm_256color" ]; then
+  check "plain xterm, as docker run -t sets it, becomes xterm-256color" test "$(term_after xterm)" = xterm-256color
+else
+  check "plain xterm stays without an xterm-256color entry" test "$(term_after xterm)" = xterm
 fi
 
 finish

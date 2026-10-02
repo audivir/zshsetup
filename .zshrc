@@ -225,13 +225,31 @@ or keep it with:
   fi
 }
 
-# falls back to xterm-256color for a terminal type without terminfo entry on this host, like
-# xterm-ghostty over ssh, so that the line editor and colors still work
+# checks whether a terminfo entry exists, in the letter (Linux) or hex (macOS) dirs that ncurses uses
+# shellcheck disable=SC2153,SC2296
+__has_terminfo() {
+  local dir
+  for dir in "$TERMINFO" "$HOME/.terminfo" ${(s.:.)TERMINFO_DIRS} /etc/terminfo /lib/terminfo \
+    /usr/share/terminfo /usr/lib/terminfo; do
+    [ -n "$dir" ] && { [ -e "$dir/${1:0:1}/$1" ] || [ -e "$dir/$(printf %x "'${1:0:1}")/$1" ]; } && return 0
+  done
+  return 1
+}
+
+# loads the terminfo entry of a terminal type that zsh did not find at its start, like that of
+# ghostty-terminfo through the TERMINFO_DIRS of pmg; falls back to xterm-256color for one without
+# an entry, and for plain xterm, as docker run -t sets it, which every current terminal exceeds;
+# so that the line editor and colors work
 # shellcheck disable=SC2154
 __fallback_term() {
   [ -n "$TERM" ] || return 0
   zmodload zsh/terminfo 2>/dev/null || return 0
-  [ -n "${terminfo[cols]}" ] || export TERM=xterm-256color
+  if [ -z "${terminfo[cols]}" ] && __has_terminfo "$TERM"; then
+    # assigning TERM makes zsh read the entry again
+    export TERM="$TERM"
+  elif [ -z "${terminfo[cols]}" ] || { [ "$TERM" = xterm ] && __has_terminfo xterm-256color; }; then
+    export TERM=xterm-256color
+  fi
 }
 
 # inits the environment before running any failable commands
@@ -281,7 +299,6 @@ __init_zshsetup_env() {
   path=("${reply[@]}" "${path[@]}")
 
   # SETUP OTHER ENVIRONMENT
-  __fallback_term
   export GNUPGHOME="$XDG_DATA_HOME/gnupg"
   export MPLCONFIGDIR="$XDG_CONFIG_HOME/matplotlib"
   export PYTHON_HISTORY="$XDG_DATA_HOME/python/python_history"
@@ -319,6 +336,9 @@ __init_zshsetup() {
   export MANPATH="$XDG_DATA_HOME/man:"
   # the environment and PATH entries of packages like go and rustup
   [ -f "${PMG_HOME:-$XDG_DATA_HOME/pmg}/env.sh" ] && . "${PMG_HOME:-$XDG_DATA_HOME/pmg}/env.sh"
+  # the terminfo entry of Ghostty, whose TERM the hosts it connects to lack, in TERMINFO_DIRS
+  __require ghostty-terminfo
+  __fallback_term
   # END PMG
 
   # BEGIN CURL AND GIT
@@ -636,7 +656,7 @@ __pull_daily
 # CLEANUP
 unfunction __assure_link __assure_dir __package_manager __last_match __pmg_installed __require __source __source_plugins
 unfunction __pull_daily
-unfunction __fallback_term __init_cache __init_zshsetup_env __init_zshsetup __install_zshsetup __save_settings __upgrade_zshsetup
+unfunction __has_terminfo __fallback_term __init_cache __init_zshsetup_env __init_zshsetup __install_zshsetup __save_settings __upgrade_zshsetup
 unfunction __which __available __download __uv_libc __bootstrap_uv __has_metadata __system_install __clean_metadata
 unfunction __install_chosen __install_main
 unset __PMG_TAG __METADATA_CREATED
