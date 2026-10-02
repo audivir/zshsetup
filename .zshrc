@@ -225,6 +225,15 @@ or keep it with:
   fi
 }
 
+# falls back to xterm-256color for a terminal type without terminfo entry on this host, like
+# xterm-ghostty over ssh, so that the line editor and colors still work
+# shellcheck disable=SC2154
+__fallback_term() {
+  [ -n "$TERM" ] || return 0
+  zmodload zsh/terminfo 2>/dev/null || return 0
+  [ -n "${terminfo[cols]}" ] || export TERM=xterm-256color
+}
+
 # inits the environment before running any failable commands
 __init_zshsetup_env() {
   export ZSHSETUP_REPO="${ZSHSETUP_REPO:-https://github.com/audivir/zshsetup}"
@@ -272,6 +281,7 @@ __init_zshsetup_env() {
   path=("${reply[@]}" "${path[@]}")
 
   # SETUP OTHER ENVIRONMENT
+  __fallback_term
   export GNUPGHOME="$XDG_DATA_HOME/gnupg"
   export MPLCONFIGDIR="$XDG_CONFIG_HOME/matplotlib"
   export PYTHON_HISTORY="$XDG_DATA_HOME/python/python_history"
@@ -623,7 +633,7 @@ __pull_daily
 # CLEANUP
 unfunction __assure_link __assure_dir __package_manager __last_match __pmg_installed __require __source __source_plugins
 unfunction __pull_daily
-unfunction __init_cache __init_zshsetup_env __init_zshsetup __install_zshsetup __save_settings __upgrade_zshsetup
+unfunction __fallback_term __init_cache __init_zshsetup_env __init_zshsetup __install_zshsetup __save_settings __upgrade_zshsetup
 unfunction __which __available __download __uv_libc __bootstrap_uv __has_metadata __system_install __clean_metadata
 unfunction __install_chosen __install_main
 unset __PMG_TAG __METADATA_CREATED

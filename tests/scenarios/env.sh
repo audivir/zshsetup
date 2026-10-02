@@ -114,4 +114,16 @@ if command -v dnf >/dev/null 2>&1; then
   check "the dnf metadata downloaded for jq is removed" no_metadata
 fi
 
+# an unknown terminal type falls back to xterm-256color, a known or empty one stays
+term_after() { env TERM="$1" zsh -c "$(zshrc_function __fallback_term)
+__fallback_term; print -r -- \"\$TERM\""; }
+check "an unknown TERM falls back to xterm-256color" test "$(term_after zshsetup-unknown)" = xterm-256color
+check "an empty TERM stays empty" test -z "$(term_after "")"
+# shellcheck disable=SC2016 # the inner zsh expands it
+if [ -n "$(env TERM=dumb zsh -c 'zmodload zsh/terminfo && print -r -- "${terminfo[cols]}"' 2>/dev/null)" ]; then
+  check "a known TERM stays" test "$(term_after dumb)" = dumb
+else
+  echo "  skip  a known TERM stays (no terminfo entry for dumb)"
+fi
+
 finish
