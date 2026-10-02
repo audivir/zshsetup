@@ -327,6 +327,14 @@ __init_zshsetup() {
   __require git
   # END CURL AND GIT
 
+  # BEGIN HOMEBREW
+  # before oh-my-zsh, whose compinit only sees the site-functions of Homebrew already in fpath
+  if [ -f "/opt/homebrew/bin/brew" ]; then
+    __source /opt/homebrew/bin/brew shellenv || return 1
+    alias homebrewupdate='brew update; brew upgrade --formulae --yes && brew cu --yes && cd /opt/homebrew && git stash pop &>/dev/null || true && cd -'
+  fi
+  # END HOMEBREW
+
   # BEGIN OH-MY-ZSH
   if [ ! -d "$ZSH" ]; then
     "$ZSHSETUP_HOME/packages/oh-my-zsh.sh" || return 1
@@ -336,11 +344,6 @@ __init_zshsetup() {
   . "$ZSH/oh-my-zsh.sh" || return 1
   # END OH-MY-ZSH
 
-  # BEGIN HOMEBREW
-  if [ -f "/opt/homebrew/bin/brew" ]; then
-    __source /opt/homebrew/bin/brew shellenv || return 1
-    alias homebrewupdate='brew update; brew upgrade --formulae --yes && brew cu --yes && cd /opt/homebrew && git stash pop &>/dev/null || true && cd -'
-  fi
   # BEGIN PYTHON
   __require uv
   # a uv in PATH replaces the one packages/pmg bootstrapped for itself
