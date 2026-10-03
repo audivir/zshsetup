@@ -339,6 +339,8 @@ __init_zshsetup() {
   # the terminfo entry of Ghostty, whose TERM the hosts it connects to lack, in TERMINFO_DIRS
   __require ghostty-terminfo
   __fallback_term
+  # the zone files for a TZ on Linux hosts without tzdata, like most containers, in TZDIR
+  [[ "$OSTYPE" == darwin* ]] || [ -f /usr/share/zoneinfo/zone1970.tab ] || __require tzdata
   # END PMG
 
   # BEGIN CURL AND GIT

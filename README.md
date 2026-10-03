@@ -85,14 +85,15 @@ python3 <(curl -fsSL https://gist.githubusercontent.com/muendelezaji/c14722ab66b
 ## Packages
 
 Installed by default (besides `zsh` and `git` from the installer): `oh-my-zsh`, `curl`, `uv`,
-`uvc`, `jq`, `gawk`, `micromamba` (not on musl), `go`, `rustup`, `bun`, `bat`, `micro`, and `kv`.
+`uvc`, `jq`, `gawk`, `micromamba` (not on musl), `go`, `rustup`, `bun`, `bat`, `micro`, `kv`, and
+`tzdata` (on Linux without the zone files).
 Add others with `ZSHSETUP_REQUIRE_<PACKAGE>`, or skip defaults with `ZSHSETUP_DISABLE_<PACKAGE>`;
 dependencies of installed packages are installed either way.
 
 The specs of pmg for `bat`, `kv`, `micro`, and `uvc` are in `packages/specs/`, all others in
 [pmg-specs](https://github.com/audivir/pmg-specs): `bun`, `cc` (a C compiler through zig), `curl`,
 `gawk`, `git`, `glibc`, `go`, `jq`, `make`, `micromamba`, `musl`, `musl-libs`, `patchelf`,
-`rustup`, `uv`, `zig`, `zsh`, and `zstd`. pmg installs dependencies like `cc` for `rustup` or `musl-libs`
+`rustup`, `tzdata`, `uv`, `zig`, `zsh`, and `zstd`. pmg installs dependencies like `cc` for `rustup` or `musl-libs`
 for `bun` on musl, and skips those the system already has.
 
 ## Platform Notes
