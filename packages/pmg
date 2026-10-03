@@ -47,9 +47,9 @@ if [ -z "$uv" ]; then
   [ -x "$uv" ] || __bootstrap_uv "$uv_dir"
 fi
 
-# a Python of uv, as the one of the system may be too old or change with its upgrades; the source
-# is written last, so an interrupted install is redone
-"$uv" venv --quiet --clear --managed-python --python 3.13 "$venv"
+# an installed Python, else 3.12 of uv; the fast path above redoes the venv once its Python is gone,
+# and the source is written last, so an interrupted install is redone
+"$uv" venv --quiet --clear --python "$(__pmg_python "$uv")" "$venv"
 if [ -d "$spec" ]; then
   "$uv" pip install --quiet --python "$venv/bin/python" --editable "$spec"
 else

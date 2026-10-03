@@ -30,7 +30,8 @@ update_theme() {
         "" | *[!0-9]*) cached_at=0 ;;
       esac
       if ((EPOCHSECONDS - cached_at >= 86400)) && command -v curl >/dev/null 2>&1; then
-        offset=$(curl -fsSL --connect-timeout 2 --max-time 3 "http://ip-api.com/line?fields=offset" 2>/dev/null)
+        offset=$(curl -fsSL --connect-timeout 2 --max-time 3 \
+          "http://ip-api.com/line?fields=offset" 2>/dev/null)
         # a failed lookup is cached as well, so it does not delay every shell.
         mkdir -p "${cache%/*}" && echo "$EPOCHSECONDS $offset" >|"$cache"
       fi

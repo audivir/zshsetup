@@ -6,7 +6,7 @@
 
 # the oldest tag of pmg zshsetup works with, which install.sh runs; packages/pmg installs the
 # latest tag and keeps an installed one while it is not older
-__PMG_TAG="v2.1.1"
+__PMG_TAG="v2.2.0"
 __PMG_REPO="https://github.com/audivir/pmg"
 
 # checks whether the version of the tag $1 is at least that of $2, e.g. v1.10.0 and v1.9.2; in the
@@ -41,6 +41,18 @@ __latest_pmg_tag() {
     fi
   done
   [ -n "$latest" ] && echo "$latest"
+}
+
+# prints the Python for pmg with the uv $1: an installed one from 3.10 on, outside of any venv,
+# if it has the tarfile data filter (backported to 3.10.12 and 3.11.4), else 3.12 for uv to install
+__pmg_python() {
+  local python
+  if python="$("$1" python find --system --no-project '>=3.10' 2>/dev/null)" &&
+    "$python" -c 'import tarfile; tarfile.data_filter' 2>/dev/null; then
+    echo "$python"
+  else
+    echo 3.12
+  fi
 }
 
 # prints the path of an executable in PATH without running it, ignoring functions and aliases
@@ -238,7 +250,7 @@ EOF
 }
 
 __install_main() {
-  local uv zshrc rc
+  local uv python zshrc rc
   if [ -z "$HOME" ]; then
     echo "HOME must be set"
     exit 1
@@ -258,8 +270,8 @@ __install_main() {
   if [ -z "$uv" ] && __install_chosen uv "$(printf 'apk uv\nbrew uv\n')"; then
     uv="$(__which uv)"
     # a packaged uv may be too old to download Python for the machine, e.g. 0.7 of Alpine 3.22 on arm64
-    if [ -n "$uv" ] && ! "$uv" python install --quiet 3.13; then
-      echo "The uv of the package manager cannot install Python 3.13, bootstrapping one" >&2
+    if [ -n "$uv" ] && [ "$(__pmg_python "$uv")" = 3.12 ] && ! "$uv" python install --quiet 3.12; then
+      echo "The uv of the package manager cannot install Python 3.12, bootstrapping one" >&2
       uv=""
     fi
   fi
@@ -271,11 +283,13 @@ __install_main() {
     fi
   fi
 
+  python="$(__pmg_python "$uv")"
+
   # pmg at its minimum tag, as git may be missing to find the latest, into the directories .zshrc
   # uses; uv checks certificates with its own, so the system needs none
   pmg() {
     XDG_BIN_HOME="$HOME/.local/bin" XDG_DATA_HOME="$HOME/.local/share" \
-      "$uv" tool run --quiet --from "${ZSHSETUP_PMG:-$__PMG_REPO/archive/refs/tags/$__PMG_TAG.tar.gz}" \
+      "$uv" tool run --quiet --python "$python" --from "${ZSHSETUP_PMG:-$__PMG_REPO/archive/refs/tags/$__PMG_TAG.tar.gz}" \
       python -m pmg "$@"
   }
 
@@ -296,7 +310,7 @@ __install_main() {
 
   # runs .zshrc only when fully downloaded, with the certificates of certifi for Python
   zshrc="$(mktemp)"
-  if ! "$uv" run --quiet --no-project --python 3.13 --with certifi python -c 'import shutil, ssl, sys, urllib.request, certifi
+  if ! "$uv" run --quiet --no-project --python "$python" --with certifi python -c 'import shutil, ssl, sys, urllib.request, certifi
 context = ssl.create_default_context(cafile=certifi.where())
 shutil.copyfileobj(urllib.request.urlopen(sys.argv[1], context=context), sys.stdout.buffer)' \
     https://github.com/audivir/zshsetup/raw/refs/heads/main/.zshrc >"$zshrc"; then
