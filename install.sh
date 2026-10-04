@@ -47,8 +47,8 @@ __latest_pmg_tag() {
 # if it has the tarfile data filter (backported to 3.10.12 and 3.11.4), else 3.12 for uv to install
 __pmg_python() {
   local python
-  if python="$("$1" python find --system --no-project '>=3.10' 2>/dev/null)" &&
-    "$python" -c 'import tarfile; tarfile.data_filter' 2>/dev/null; then
+  if python="$("$1" python find --system --no-project '>=3.10' 2>/dev/null)" \
+    && "$python" -c 'import tarfile; tarfile.data_filter' 2>/dev/null; then
     echo "$python"
   else
     echo 3.12

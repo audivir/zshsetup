@@ -341,6 +341,7 @@ __init_zshsetup() {
   __fallback_term
   # ncurses ignores TERMINFO_DIRS and ~/.terminfo in a setgid screen (RHEL and its clones), so a
   # TERM without an entry in the system dirs, like xterm-ghostty, becomes xterm-256color for it.
+  # shellcheck disable=SC2154
   if [ -g "${commands[screen]}" ] || [ -u "${commands[screen]}" ]; then
     screen() {
       local dir
