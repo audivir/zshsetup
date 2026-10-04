@@ -58,6 +58,14 @@ rm() {
   /bin/rm "$@"
 }
 
+# runs screen with xterm-256color, as some hosts (e.g. Rocky 9) do not find the terminfo entry
+# of TERMs like xterm-ghostty for it
+if command -v screen >/dev/null 2>&1; then
+  screen() {
+    TERM=xterm-256color command screen "$@"
+  }
+fi
+
 # shows the history with parsed unix timestamps
 showhist() {
   # zsh stores non-ASCII history as metafied bytes, which are no valid UTF-8

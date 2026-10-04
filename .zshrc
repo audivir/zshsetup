@@ -339,21 +339,6 @@ __init_zshsetup() {
   # the terminfo entry of Ghostty, whose TERM the hosts it connects to lack, in TERMINFO_DIRS
   __require ghostty-terminfo
   __fallback_term
-  # ncurses ignores TERMINFO_DIRS and ~/.terminfo in a setgid screen (RHEL and its clones), so a
-  # TERM without an entry in the system dirs, like xterm-ghostty, becomes xterm-256color for it.
-  # shellcheck disable=SC2154
-  if [ -g "${commands[screen]}" ] || [ -u "${commands[screen]}" ]; then
-    screen() {
-      local dir
-      for dir in /etc/terminfo /lib/terminfo /usr/share/terminfo /usr/lib/terminfo; do
-        if [ -e "$dir/${TERM:0:1}/$TERM" ]; then
-          command screen "$@"
-          return
-        fi
-      done
-      TERM=xterm-256color command screen "$@"
-    }
-  fi
   # the zone files for a TZ on Linux hosts without tzdata, like most containers, in TZDIR
   [[ "$OSTYPE" == darwin* ]] || [ -f /usr/share/zoneinfo/zone1970.tab ] || __require tzdata
   # END PMG
