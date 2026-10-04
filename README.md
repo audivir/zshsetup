@@ -88,7 +88,7 @@ python3 <(curl -fsSL https://gist.githubusercontent.com/muendelezaji/c14722ab66b
 
 Installed by default (besides `zsh` and `git` from the installer): `oh-my-zsh`, `curl`, `uv`,
 `uvc`, `jq`, `gawk`, `micromamba` (not on musl), `go`, `rustup`, `bun`, `bat`, `micro`, `kv`, and
-`tzdata` (on Linux without the zone files).
+`tzdata`.
 Add others with `ZSHSETUP_REQUIRE_<PACKAGE>`, or skip defaults with `ZSHSETUP_DISABLE_<PACKAGE>`;
 dependencies of installed packages are installed either way.
 
