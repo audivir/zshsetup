@@ -5,7 +5,7 @@
 is_musl || skip "musl only"
 setup_zshsetup
 ln -s "$ZSHSETUP_HOME/.zshrc" "$HOME/.zshrc"
-export ZSHSETUP_CHOICE=manual ZSHSETUP_REQUIRE_MICROMAMBA=1 ZSHSETUP_DISABLE_GO=1
+export ZSHSETUP_CHOICE=manual ZSHSETUP_REQUIRE_MICROMAMBA=1 ZSHSETUP_REQUIRE_RUSTUP=1 ZSHSETUP_REQUIRE_BUN=1
 
 check "the first shell start installs everything" zsh -i -c 'echo ready'
 check "no install failed" test ! -e "$ZSHSETUP_HOME/failed"

@@ -405,7 +405,6 @@ __init_zshsetup() {
   # for go from other package managers, pmg sets GOROOT, GOPATH, and PATH in its env file
   export GOPATH="${GOPATH:-$XDG_DATA_HOME/go}"
   PATH="$GOPATH/bin:$PATH"
-  __require go
   # END GO
 
   # BEGIN RUST
@@ -413,7 +412,6 @@ __init_zshsetup() {
   export RUSTUP_HOME="${RUSTUP_HOME:-$XDG_DATA_HOME/rustup}"
   export CARGO_HOME="${CARGO_HOME:-$XDG_DATA_HOME/cargo}"
   PATH="$CARGO_HOME/bin:/opt/homebrew/opt/rustup/bin:$PATH"
-  __require rustup
   # the cc of pmg is zig, which links musl programs itself
   if [[ "$(whence -p cc)" == "$XDG_BIN_HOME/cc" ]] && [ -e "/lib/ld-musl-$(uname -m).so.1" ]; then
     export "CARGO_TARGET_$(uname -m | tr '[:lower:]' '[:upper:]')_UNKNOWN_LINUX_MUSL_RUSTFLAGS=-C link-self-contained=no"
@@ -442,7 +440,6 @@ __init_zshsetup() {
   export BUN_RUNTIME_TRANSPILER_CACHE_PATH="$XDG_CACHE_HOME/bun/runtime"
   export BUN_CONFIG_DIR="$XDG_CONFIG_HOME/bun"
   PATH="$BUN_INSTALL/bin:$PATH"
-  __require bun
   # END JAVASCRIPT
 
   # BEGIN EXTRA TOOLS
