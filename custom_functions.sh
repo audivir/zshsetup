@@ -58,13 +58,11 @@ rm() {
   /bin/rm "$@"
 }
 
-# runs screen with xterm-256color, as some hosts (e.g. Rocky 9) do not find the terminfo entry
-# of TERMs like xterm-ghostty for it, and with our zsh, as SHELL is the login shell, which a zsh
-# of zshsetup without chsh is not
+# runs screen with our zsh, as SHELL is the login shell, which a zsh of zshsetup without chsh is not
 if command -v screen >/dev/null 2>&1; then
   screen() {
     # shellcheck disable=SC2154
-    SHELL="${commands[zsh]:-$SHELL}" TERM=xterm-256color command screen "$@"
+    SHELL="${commands[zsh]:-$SHELL}" command screen "$@"
   }
 fi
 
