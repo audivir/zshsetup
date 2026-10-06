@@ -35,32 +35,36 @@ __assure_dir() {
   mkdir -p "$dir_to_check" || __eprint "$dir_to_check not found and not creatable"
 }
 
-# installs a package with the manager from ZSHSETUP_CHOICE_<PACKAGE>, ZSHSETUP_CHOICE, or a menu
-# manual installs with pmg, brew and apt/apk with the names from the spec of the package
+# chooses the manager of a package from ZSHSETUP_CHOICE_<PACKAGE>, ZSHSETUP_CHOICE, or a menu, and
+# sets REPLY to it and reply to the names of the package there; manual installs with pmg, brew and
+# apt/apk with the names from the spec of the package
 # shellcheck disable=SC2206,SC2296,SC2299
-__package_manager() {
+__choose_manager() {
   local package choice choice_var manager name
   local -a options
   local -A names
   package="$1"
-  while read -r manager name; do
-    names[$manager]="$name"
-  done < <(pmg external "$package" 2>/dev/null)
+  choice_var="ZSHSETUP_CHOICE_${${package:u}//-/_}"
+  choice="${(P)choice_var:-${ZSHSETUP_CHOICE:-}}"
   options=()
-  if [[ "$OSTYPE" == darwin* ]]; then
-    [ -n "${names[brew]}" ] && __available brew && options+=(brew)
-  else
-    [ -n "${names[apt]}" ] && __available apt-get && options+=(apt)
-    [ -n "${names[apk]}" ] && __available apk && options+=(apk)
-    [ -n "${names[dnf]}" ] && __available dnf && options+=(dnf)
-    # yum of Rocky Linux 8 and later is dnf
-    [ -n "${names[yum]}" ] && __available yum && ! __available dnf && options+=(yum)
+  # manual needs no names from the spec, which would start pmg once more
+  if [ "$choice" != manual ]; then
+    while read -r manager name; do
+      names[$manager]="$name"
+    done < <(pmg external "$package" 2>/dev/null)
+    if [[ "$OSTYPE" == darwin* ]]; then
+      [ -n "${names[brew]}" ] && __available brew && options+=(brew)
+    else
+      [ -n "${names[apt]}" ] && __available apt-get && options+=(apt)
+      [ -n "${names[apk]}" ] && __available apk && options+=(apk)
+      [ -n "${names[dnf]}" ] && __available dnf && options+=(dnf)
+      # yum of Rocky Linux 8 and later is dnf
+      [ -n "${names[yum]}" ] && __available yum && ! __available dnf && options+=(yum)
+    fi
   fi
   options+=(manual)
 
   echo "Install $package via:" >&2
-  choice_var="ZSHSETUP_CHOICE_${${package:u}//-/_}"
-  choice="${(P)choice_var:-${ZSHSETUP_CHOICE:-}}"
   if [ -n "$choice" ]; then
     # an unavailable choice (e.g. apt on macOS) falls back to manual
     ((${options[(Ie)$choice]})) || choice="manual"
@@ -91,13 +95,18 @@ __package_manager() {
     return 1
   fi
   echo "$choice" >&2
+  REPLY="$choice"
+  # a spec may list several packages, e.g. "curl ca-certificates"
+  reply=(${=names[$choice]})
+}
 
-  if [ "$choice" = manual ]; then
-    pmg install "$package" || return 1
+# installs a package with the manager __choose_manager chooses
+__package_manager() {
+  __choose_manager "$1" || return 1
+  if [ "$REPLY" = manual ]; then
+    pmg install "$1" || return 1
   else
-    # a spec may list several packages, e.g. "curl ca-certificates"
-    # shellcheck disable=SC2086
-    __system_install "$choice" ${=names[$choice]} || return 1
+    __system_install "$REPLY" "${reply[@]}" || return 1
   fi
 }
 
@@ -115,19 +124,19 @@ __pmg_installed() {
   [ -n "$(__last_match "${PMG_HOME:-$XDG_DATA_HOME/pmg}/installed/$1@*.json")" ]
 }
 
-# installs a missing tool, warns instead of aborting and skips a failed install for a day
-# ZSHSETUP_DISABLE_<PACKAGE> skips the install, but a package installed anyway (e.g. as a dependency) is used
+# checks whether a tool is missing and to be installed: ZSHSETUP_DISABLE_<PACKAGE> skips the
+# install, but a package installed anyway (e.g. as a dependency) is used, and a failed install is
+# skipped for a day
 # shellcheck disable=SC2296,SC2299
-__require() {
-  local package marker disable_var
+__wants_install() {
+  local package marker disable_var failed_at
   package="$1"
   marker="$ZSHSETUP_HOME/failed/$package"
   disable_var="ZSHSETUP_DISABLE_${${package:u}//-/_}"
-  __available "$package" && return 0
+  __available "$package" && return 1
   [ -n "${(P)disable_var}" ] && return 1
-  __pmg_installed "$package" && return 0
+  __pmg_installed "$package" && return 1
   # the marker holds the time of the failure
-  local failed_at
   zmodload zsh/datetime
   if [ -f "$marker" ]; then
     failed_at="$(<"$marker")"
@@ -136,14 +145,101 @@ __require() {
     esac
     ((EPOCHSECONDS - failed_at < 86400)) && return 1
   fi
+  return 0
+}
+
+# checks whether an install of a tool worked, and otherwise warns and skips it for a day
+__record_install() {
+  local package marker
+  package="$1"
+  marker="$ZSHSETUP_HOME/failed/$package"
   # rehash, as zsh would otherwise keep running a command it found before
-  if __package_manager "$package" && rehash && { __available "$package" || __pmg_installed "$package"; }; then
+  rehash
+  if __available "$package" || __pmg_installed "$package"; then
     . "${PMG_HOME:-$XDG_DATA_HOME/pmg}/env.sh" 2>/dev/null
     rm -f "$marker"
     return 0
   fi
+  zmodload zsh/datetime
   mkdir -p "${marker%/*}" && echo "$EPOCHSECONDS" >"$marker"
   __eprint "zshsetup: installing $package failed, skipping it for a day (retry with install_manual $package)"
+}
+
+# installs a missing tool, warns instead of aborting, see __wants_install
+__require() {
+  if ! __wants_install "$1"; then
+    __available "$1" || __pmg_installed "$1"
+    return
+  fi
+  __package_manager "$1"
+  __record_install "$1"
+}
+
+# installs the missing tools of a list together, so that the __require of each finds it: all
+# choices are asked first, then pmg installs the manual ones in one run, which checks their
+# releases and downloads them in parallel and runs their install scripts as soon as their
+# dependencies are installed, and each system package manager installs its packages in one call
+# shellcheck disable=SC2086,SC2206,SC2296
+__require_all() {
+  local package manager
+  local -a missing manual
+  local -A system
+  # a package listed twice, e.g. micromamba with ZSHSETUP_REQUIRE_MICROMAMBA, is installed once
+  typeset -U missing
+  for package in "$@"; do
+    __wants_install "$package" && missing+=("$package")
+  done
+  ((${#missing})) || return 0
+  for package in "${missing[@]}"; do
+    # without a choice, the check below records the failure
+    __choose_manager "$package" || continue
+    if [ "$REPLY" = manual ]; then
+      manual+=("$package")
+    else
+      system[$REPLY]+=" ${reply[*]}"
+    fi
+  done
+  for manager in ${(k)system}; do
+    __system_install "$manager" ${=system[$manager]}
+  done
+  # an error that stops all of pmg, e.g. a spec missing for one package, or one failing download
+  # in pmg before v2.3.0, leaves the others to install one by one
+  if ((${#manual})) && ! pmg install "${manual[@]}"; then
+    rehash
+    for package in "${manual[@]}"; do
+      __available "$package" || __pmg_installed "$package" || pmg install "$package"
+    done
+  fi
+  for package in "${missing[@]}"; do
+    __record_install "$package"
+  done
+  return 0
+}
+
+# checks whether micromamba is wanted: conda-forge packages need glibc, see packages/musl/micromamba
+__wants_micromamba() {
+  [ -n "$ZSHSETUP_REQUIRE_MICROMAMBA" ] || { [ ! -e /lib/ld-musl-x86_64.so.1 ] && [ ! -e /lib/ld-musl-aarch64.so.1 ]; }
+}
+
+# sets reply to the non-default packages from ZSHSETUP_REQUIRE_<PACKAGE>, e.g. ZSHSETUP_REQUIRE_ZIG
+# shellcheck disable=SC2296,SC2299
+__extra_packages() {
+  local required_var
+  reply=()
+  for required_var in ${(k)parameters[(I)ZSHSETUP_REQUIRE_*]}; do
+    [ -n "${(P)required_var}" ] && reply+=("${${${required_var#ZSHSETUP_REQUIRE_}:l}//_/-}")
+  done
+  return 0
+}
+
+# sets reply to the packages that __init_zshsetup requires, in its order, for __require_all
+__required_packages() {
+  local -a extra
+  __extra_packages
+  extra=("${reply[@]}")
+  reply=(ghostty-terminfo tzdata curl git uv uvc jq gawk)
+  __wants_micromamba && reply+=(micromamba)
+  reply+=("${extra[@]}" bat micro kv)
 }
 
 __source() {
@@ -336,18 +432,7 @@ __init_zshsetup() {
   export MANPATH="$XDG_DATA_HOME/man:"
   # the environment and PATH entries of packages like go and rustup
   [ -f "${PMG_HOME:-$XDG_DATA_HOME/pmg}/env.sh" ] && . "${PMG_HOME:-$XDG_DATA_HOME/pmg}/env.sh"
-  # the terminfo entry of Ghostty, whose TERM the hosts it connects to lack, in TERMINFO_DIRS
-  __require ghostty-terminfo
-  __fallback_term
-  # the zone files for a TZ, also on hosts without tzdata like most containers, in TZDIR
-  __require tzdata
   # END PMG
-
-  # BEGIN CURL AND GIT
-  # oh-my-zsh installs with both
-  __require curl
-  __require git
-  # END CURL AND GIT
 
   # BEGIN HOMEBREW
   # before oh-my-zsh, whose compinit only sees the site-functions of Homebrew already in fpath
@@ -356,6 +441,48 @@ __init_zshsetup() {
     alias homebrewupdate='brew update; brew upgrade --formulae --yes && brew cu --yes && cd /opt/homebrew && git stash pop &>/dev/null || true && cd -'
   fi
   # END HOMEBREW
+
+  # BEGIN GO
+  # for go from other package managers, pmg sets GOROOT, GOPATH, and PATH in its env file
+  export GOPATH="${GOPATH:-$XDG_DATA_HOME/go}"
+  PATH="$GOPATH/bin:$PATH"
+  # END GO
+
+  # BEGIN RUST
+  # for rustup from other package managers, pmg sets RUSTUP_HOME, CARGO_HOME, and PATH in its env file
+  export RUSTUP_HOME="${RUSTUP_HOME:-$XDG_DATA_HOME/rustup}"
+  export CARGO_HOME="${CARGO_HOME:-$XDG_DATA_HOME/cargo}"
+  PATH="$CARGO_HOME/bin:/opt/homebrew/opt/rustup/bin:$PATH"
+  # END RUST
+
+  # BEGIN JAVASCRIPT
+  export BUN_INSTALL="$XDG_DATA_HOME/bun"
+  export BUN_INSTALL_CACHE_DIR="$XDG_CACHE_HOME/bun/install"
+  export BUN_RUNTIME_TRANSPILER_CACHE_PATH="$XDG_CACHE_HOME/bun/runtime"
+  export BUN_CONFIG_DIR="$XDG_CONFIG_HOME/bun"
+  PATH="$BUN_INSTALL/bin:$PATH"
+  # END JAVASCRIPT
+
+  # BEGIN MISSING PACKAGES
+  # all at once, once PATH has the dirs of Homebrew and the toolchains, where a tool may already
+  # be; the __require of each package below then finds it
+  __required_packages
+  __require_all "${reply[@]}"
+  # END MISSING PACKAGES
+
+  # BEGIN TERMINFO AND TZDATA
+  # the terminfo entry of Ghostty, whose TERM the hosts it connects to lack, in TERMINFO_DIRS
+  __require ghostty-terminfo
+  __fallback_term
+  # the zone files for a TZ, also on hosts without tzdata like most containers, in TZDIR
+  __require tzdata
+  # END TERMINFO AND TZDATA
+
+  # BEGIN CURL AND GIT
+  # oh-my-zsh installs with both
+  __require curl
+  __require git
+  # END CURL AND GIT
 
   # BEGIN OH-MY-ZSH
   if [ ! -d "$ZSH" ]; then
@@ -384,9 +511,7 @@ __init_zshsetup() {
   # END GAWK
   #
   # BEGIN MICROMAMBA
-  # micromamba and conda-forge packages need glibc, see packages/musl/micromamba
-  if { [ -n "$ZSHSETUP_REQUIRE_MICROMAMBA" ] || { [ ! -e /lib/ld-musl-x86_64.so.1 ] && [ ! -e /lib/ld-musl-aarch64.so.1 ]; }; } \
-    && __require micromamba; then
+  if __wants_micromamba && __require micromamba; then
     alias conda='micromamba'
     export MAMBA_ROOT_PREFIX="$XDG_DATA_HOME/micromamba"
     local real_exe
@@ -401,17 +526,7 @@ __init_zshsetup() {
   fi
   # END MICROMAMBA
 
-  # BEGIN GO
-  # for go from other package managers, pmg sets GOROOT, GOPATH, and PATH in its env file
-  export GOPATH="${GOPATH:-$XDG_DATA_HOME/go}"
-  PATH="$GOPATH/bin:$PATH"
-  # END GO
-
-  # BEGIN RUST
-  # for rustup from other package managers, pmg sets RUSTUP_HOME, CARGO_HOME, and PATH in its env file
-  export RUSTUP_HOME="${RUSTUP_HOME:-$XDG_DATA_HOME/rustup}"
-  export CARGO_HOME="${CARGO_HOME:-$XDG_DATA_HOME/cargo}"
-  PATH="$CARGO_HOME/bin:/opt/homebrew/opt/rustup/bin:$PATH"
+  # BEGIN RUST TOOLCHAIN
   # the cc of pmg is zig, which links musl programs itself
   if [[ "$(whence -p cc)" == "$XDG_BIN_HOME/cc" ]] && [ -e "/lib/ld-musl-$(uname -m).so.1" ]; then
     export "CARGO_TARGET_$(uname -m | tr '[:lower:]' '[:upper:]')_UNKNOWN_LINUX_MUSL_RUSTFLAGS=-C link-self-contained=no"
@@ -422,25 +537,15 @@ __init_zshsetup() {
   if [ -n "$musl_libs" ] && [ ! -e /usr/lib/libgcc_s.so.1 ]; then
     export LD_LIBRARY_PATH="$musl_libs${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
   fi
-  # END RUST
+  # END RUST TOOLCHAIN
 
   # BEGIN REQUIRED PACKAGES
-  # non-default packages from ZSHSETUP_REQUIRE_<PACKAGE>, e.g. ZSHSETUP_REQUIRE_ZIG
-  local required_var
-  # shellcheck disable=SC2296
-  for required_var in ${(k)parameters[(I)ZSHSETUP_REQUIRE_*]}; do
-    # shellcheck disable=SC2296,SC2299
-    [ -n "${(P)required_var}" ] && __require "${${${required_var#ZSHSETUP_REQUIRE_}:l}//_/-}"
+  local package
+  __extra_packages
+  for package in "${reply[@]}"; do
+    __require "$package"
   done
   # END REQUIRED PACKAGES
-
-  # BEGIN JAVASCRIPT
-  export BUN_INSTALL="$XDG_DATA_HOME/bun"
-  export BUN_INSTALL_CACHE_DIR="$XDG_CACHE_HOME/bun/install"
-  export BUN_RUNTIME_TRANSPILER_CACHE_PATH="$XDG_CACHE_HOME/bun/runtime"
-  export BUN_CONFIG_DIR="$XDG_CONFIG_HOME/bun"
-  PATH="$BUN_INSTALL/bin:$PATH"
-  # END JAVASCRIPT
 
   # BEGIN EXTRA TOOLS
   __require bat

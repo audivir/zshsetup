@@ -9,6 +9,7 @@ apt_installed() { dpkg -s "$1" 2>/dev/null | grep -q 'ok installed'; }
 # __package_manager of .zshrc with the functions it calls
 functions="$(zshrc_function __eprint)
 $(install_functions)
+$(zshrc_function __choose_manager)
 $(zshrc_function __package_manager)"
 # shellcheck disable=SC2329
 apt_lists() { find /var/lib/apt/lists -maxdepth 1 -type f ! -name lock | head -n 1; }

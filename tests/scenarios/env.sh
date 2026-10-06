@@ -9,13 +9,18 @@ cat >"$fake/pmg" <<'EOF'
 #!/bin/sh
 case "$1" in
   external) echo "${FAKE_EXTERNAL-apt fakeapt}" ;;
-  install) echo "fake install $2" ;;
+  install)
+    shift
+    echo "fake install $*"
+    [ -z "${FAKE_INSTALL_FAILS:-}" ]
+    ;;
 esac
 EOF
 chmod +x "$fake/pmg"
 choose() { # env assignments, then runs __package_manager of .zshrc for fake-pkg
   env PATH="$fake:$PATH" "$@" zsh -c "$(zshrc_function __eprint)
 $(install_functions)
+$(zshrc_function __choose_manager)
 $(zshrc_function __package_manager)
 __package_manager fake-pkg" </dev/null 2>&1
 }
@@ -32,6 +37,33 @@ if has_apt; then
   out="$(choose ZSHSETUP_CHOICE= ZSHSETUP_CHOICE_FAKE_PKG=)"
   check "no choice and no terminal stops with a hint" contains "$out" "set ZSHSETUP_CHOICE or ZSHSETUP_CHOICE_FAKE_PKG"
 fi
+
+# missing packages install together, a package that is there or listed twice only once
+require_all() { # env assignments, then runs __require_all of .zshrc for fake-a, fake-b, and sh
+  env PATH="$fake:$PATH" ZSHSETUP_CHOICE=manual "$@" zsh -c "$(zshrc_function __eprint)
+$(install_functions)
+$(zshrc_function __last_match)
+$(zshrc_function __pmg_installed)
+$(zshrc_function __choose_manager)
+$(zshrc_function __wants_install)
+$(zshrc_function __record_install)
+$(zshrc_function __require_all)
+__require_all fake-a sh fake-b fake-a" </dev/null 2>&1
+}
+out="$(require_all)"
+check "__require_all installs the missing packages with one pmg run" contains "$out" "^fake install fake-a fake-b$"
+rm -rf "$ZSHSETUP_HOME/failed"
+out="$(require_all FAKE_INSTALL_FAILS=1)"
+check "__require_all installs one by one after pmg failed for all" contains "$out" "^fake install fake-b$"
+check "__require_all asks for each missing package once" test "$(printf '%s\n' "$out" | grep -c 'Install fake-a via')" -eq 1
+check "__require_all skips packages in PATH" lacks "$out" "Install sh via"
+check "__require_all records the packages that are still missing" contains "$out" "installing fake-b failed"
+out="$(require_all)"
+check "__require_all skips packages that failed within a day" lacks "$out" "fake install"
+rm -rf "$ZSHSETUP_HOME/failed"
+out="$(require_all ZSHSETUP_DISABLE_FAKE_A=1)"
+check "__require_all skips disabled packages" contains "$out" "^fake install fake-b$"
+rm -rf "$ZSHSETUP_HOME/failed"
 
 # settings given at installation are saved to preinit.zsh
 preinit_home="$(mktemp -d)"
