@@ -491,6 +491,8 @@ __init_zshsetup() {
   __assure_dir "$ZSH_CACHE_DIR" || return 1
   # shellcheck disable=SC2034
   . "$ZSH/oh-my-zsh.sh" || return 1
+  # the exit code of the last command after the prompt of the theme, if it is not 0
+  PROMPT+="%(?..%B%F{red}%1{⟨%}%?%1{⟩%}%f%b )"
   # END OH-MY-ZSH
 
   # BEGIN PYTHON

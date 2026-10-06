@@ -63,6 +63,10 @@ else
 fi
 check "the next shell does not reinstall disabled gawk" lacks "$out" "Install gawk via"
 check "the next shell writes the completion of pmg" test -s "$XDG_DATA_HOME/zsh/site-functions/_pmg"
+# shellcheck disable=SC2016,SC2086
+out="$(env -i $clean_env zsh -i -c 'true; print -P "ok:$PROMPT"; (exit 12); print -P "failed:$PROMPT"' 2>&1)"
+check "the prompt shows the exit code if it is not 0" contains "$out" "failed:.*⟨12⟩"
+check "the prompt hides the exit code if it is 0" lacks "$out" "ok:.*⟨"
 
 # update upgrades with the pulled .zshrc, as the steps of the running shell may be outdated
 awk '{ print } /^__upgrade_zshsetup\(\) \{$/ { print "  touch /tmp/upgraded-by-pulled-zshrc" }' "$src/.zshrc" \
