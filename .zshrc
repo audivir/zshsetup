@@ -372,9 +372,9 @@ __init_zshsetup_env() {
 
   # SETUP HISTORY
   HISTFILE="$ZSHSETUP_HOME/zsh_history"
-  HISTSIZE=50000
+  HISTSIZE=200000
   # shellcheck disable=SC2034
-  SAVEHIST=1000
+  SAVEHIST=100000
 
   # SETUP OH-MY-ZSH
   export ZSH="$ZSHSETUP_HOME/oh-my-zsh"
