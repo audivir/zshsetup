@@ -13,7 +13,7 @@ rights.
 - `uv`, `curl`, `wget`, `python3`, or `/usr/lib/apt/apt-helper` (Debian/Ubuntu), and `tar`
   (`git` is installed from prebuilt binaries if missing)
 - `sha256sum` (GNU coreutils, BusyBox) or `shasum` (macOS), unless `uv` is in `PATH`
-- `zsh` (installed to `~/.local` with pmg from [zsh-bin](https://github.com/romkatv/zsh-bin) if missing)
+- `zsh` (installed to `~/.local` with pmg from [zsh-static](https://github.com/audivir/zsh-static) if missing)
 - Python 3.10 or newer for pmg, with the safe extraction of `tarfile` (3.10.12, 3.11.4, or newer),
   or else Python 3.12, which `uv` installs
 
