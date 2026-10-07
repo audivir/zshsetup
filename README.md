@@ -89,11 +89,11 @@ python3 <(curl -fsSL https://gist.githubusercontent.com/muendelezaji/c14722ab66b
 ## Packages
 
 Installed by default (besides `zsh` and `git` from the installer): `oh-my-zsh`, `curl`, `uv`,
-`uvc`, `jq`, `gawk`, `micromamba` (not on musl), `bat`, `micro`, `kv`, and `tzdata`.
+`uvc`, `jq`, `gawk`, `micromamba` (not on musl), `bat`, `micro`, and `tzdata`.
 Add others with `ZSHSETUP_REQUIRE_<PACKAGE>`, or skip defaults with `ZSHSETUP_DISABLE_<PACKAGE>`;
 dependencies of installed packages are installed either way. `go`, `rustup`, and `bun` take long to
 install, so they need `ZSHSETUP_REQUIRE_GO`, `ZSHSETUP_REQUIRE_RUSTUP`, or `ZSHSETUP_REQUIRE_BUN`;
-their paths are set up either way.
+their paths are set up either way. `kv` needs `ZSHSETUP_REQUIRE_KV`.
 
 The specs of pmg for `bat`, `kv`, `micro`, and `uvc` are in `packages/specs/`, all others in
 [pmg-specs](https://github.com/audivir/pmg-specs): `bun`, `cc` (a C compiler through zig), `curl`,

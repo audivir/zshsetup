@@ -239,7 +239,7 @@ __required_packages() {
   extra=("${reply[@]}")
   reply=(ghostty-terminfo tzdata curl git uv uvc jq gawk)
   __wants_micromamba && reply+=(micromamba)
-  reply+=("${extra[@]}" bat micro kv)
+  reply+=("${extra[@]}" bat micro)
 }
 
 __source() {
@@ -552,7 +552,6 @@ __init_zshsetup() {
   # BEGIN EXTRA TOOLS
   __require bat
   __require micro
-  __require kv
   # END EXTRA TOOLS
 
   # the metadata of apt, dnf, and yum that installs downloaded onto a system without any

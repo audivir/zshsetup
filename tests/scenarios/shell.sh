@@ -4,7 +4,8 @@
 setup_env
 export ZSHSETUP_CHOICE=manual
 
-# a git repo of the working tree to install from, with kv failing on purpose
+# a git repo of the working tree to install from, with kv, which is not installed by default,
+# required and failing on purpose
 src="$(mktemp -d)/zshsetup"
 copy_tree "$src"
 check "git installs for cloning" env ZSHSETUP_HOME="$src" sh "$src/packages/pmg" install git
@@ -19,8 +20,8 @@ git -C "$src" add -A
 git -C "$src" -c user.name=test -c user.email=test@test commit -q -m test
 
 # micromamba and gawk are slow to install and covered elsewhere
-export ZSHSETUP_REPO="$src" ZSHSETUP_REQUIRE_PATCHELF=1 ZSHSETUP_DISABLE_MICROMAMBA=1 \
-  ZSHSETUP_DISABLE_GAWK=1
+export ZSHSETUP_REPO="$src" ZSHSETUP_REQUIRE_PATCHELF=1 ZSHSETUP_REQUIRE_KV=1 \
+  ZSHSETUP_DISABLE_MICROMAMBA=1 ZSHSETUP_DISABLE_GAWK=1
 unset ZSHSETUP_HOME
 home="$HOME/.config/zshsetup"
 check "zsh .zshrc install succeeds" zsh "$src/.zshrc" install
