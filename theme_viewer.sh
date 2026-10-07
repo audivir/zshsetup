@@ -63,11 +63,8 @@ kv|light|dark|kv --theme
   while IFS='|' read -r app light dark template; do
     [ -z "$app" ] && continue
 
-    # skip if app is not installed
-    if ! command -v "$app" >/dev/null; then
-      echo "$app not found, cannot create themed functions" >&2
-      continue
-    fi
+    # skip apps that are not installed, like kv, which is only installed when required
+    command -v "$app" >/dev/null || continue
 
     eval "\
 $app() {
