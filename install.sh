@@ -78,6 +78,24 @@ __available() {
   fi
 }
 
+# installs pmg from a spec, the archive of a tag or a local checkout (installed editable), into the
+# venv that packages/pmg runs, with an installed Python, else 3.12 of uv; the source is written
+# last, so an interrupted install is redone
+__install_pmg_venv() {
+  local uv venv source spec
+  uv="$1"
+  venv="$2"
+  source="$3"
+  spec="$4"
+  "$uv" venv --quiet --clear --python "$(__pmg_python "$uv")" "$venv" || return 1
+  if [ -d "$spec" ]; then
+    "$uv" pip install --quiet --python "$venv/bin/python" --editable "$spec" || return 1
+  else
+    "$uv" pip install --quiet --python "$venv/bin/python" "$spec" || return 1
+  fi
+  printf '%s\n' "$source" >"$venv/.source"
+}
+
 # prints a URL with curl, wget, python3, or apt-helper, for bootstrapping uv
 __download() {
   local tmp
@@ -250,7 +268,7 @@ EOF
 }
 
 __install_main() {
-  local uv python zshrc rc
+  local uv venv installed source spec zshrc rc
   if [ -z "$HOME" ]; then
     echo "HOME must be set"
     exit 1
@@ -283,14 +301,28 @@ __install_main() {
     fi
   fi
 
-  python="$(__pmg_python "$uv")"
-
-  # pmg at its minimum tag, as git may be missing to find the latest, into the directories .zshrc
-  # uses; uv checks certificates with its own, so the system needs none
+  # pmg at its minimum tag, as git may be missing to find the latest, in the venv packages/pmg runs,
+  # so the first shell need not install it again; uv checks certificates with its own, so the
+  # system needs none
+  venv="$HOME/.local/share/zshsetup/pmg"
+  if [ -n "${ZSHSETUP_PMG:-}" ]; then
+    source="$ZSHSETUP_PMG"
+    spec="$ZSHSETUP_PMG"
+  else
+    source="$__PMG_TAG"
+    spec="$__PMG_REPO/archive/refs/tags/$__PMG_TAG.tar.gz"
+  fi
+  # a venv that packages/pmg would run as it is, e.g. of an earlier install, is kept
+  installed="$(cat "$venv/.source" 2>/dev/null || true)"
+  if [ ! -x "$venv/bin/python" ] || { [ -n "${ZSHSETUP_PMG:-}" ] && [ "$installed" != "$source" ]; } \
+    || { [ -z "${ZSHSETUP_PMG:-}" ] && ! __version_at_least "$installed" "$__PMG_TAG"; }; then
+    if ! __install_pmg_venv "$uv" "$venv" "$source" "$spec"; then
+      echo "Failed to install pmg" >&2
+      exit 1
+    fi
+  fi
   pmg() {
-    XDG_BIN_HOME="$HOME/.local/bin" XDG_DATA_HOME="$HOME/.local/share" \
-      "$uv" tool run --quiet --python "$python" --from "${ZSHSETUP_PMG:-$__PMG_REPO/archive/refs/tags/$__PMG_TAG.tar.gz}" \
-      python -m pmg "$@"
+    XDG_BIN_HOME="$HOME/.local/bin" XDG_DATA_HOME="$HOME/.local/share" "$venv/bin/python" -m pmg "$@"
   }
 
   if ! __available zsh && ! pmg install zsh; then
@@ -308,9 +340,9 @@ __install_main() {
     exit 1
   fi
 
-  # runs .zshrc only when fully downloaded, with the certificates of certifi for Python
+  # runs .zshrc only when fully downloaded, with the certificates of certifi, a dependency of pmg
   zshrc="$(mktemp)"
-  if ! "$uv" run --quiet --no-project --python "$python" --with certifi python -c 'import shutil, ssl, sys, urllib.request, certifi
+  if ! "$venv/bin/python" -c 'import shutil, ssl, sys, urllib.request, certifi
 context = ssl.create_default_context(cafile=certifi.where())
 shutil.copyfileobj(urllib.request.urlopen(sys.argv[1], context=context), sys.stdout.buffer)' \
     https://github.com/audivir/zshsetup/raw/refs/heads/main/.zshrc >"$zshrc"; then
