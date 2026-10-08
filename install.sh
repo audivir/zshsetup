@@ -6,7 +6,7 @@
 
 # the oldest tag of pmg zshsetup works with, which install.sh runs; packages/pmg installs the
 # latest tag and keeps an installed one while it is not older
-__PMG_TAG="v2.3.3"
+__PMG_TAG="v2.3.4"
 __PMG_REPO="https://github.com/audivir/pmg"
 
 # checks whether the version of the tag $1 is at least that of $2, e.g. v1.10.0 and v1.9.2; in the
