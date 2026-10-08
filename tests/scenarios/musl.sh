@@ -1,11 +1,12 @@
 #!/bin/sh
 # musl extras through a shell start: micromamba with a user-space glibc (create, activate, run,
-# completion), Rust with zig's libgcc_s and cc, bun with musl-libs, and statically built make and gawk (slow)
+# completion), Rust with zig's libgcc_s and cc, bun with musl-libs, make built with zig, and gawk (slow)
 . "${ZSHSETUP_TEST_REPO:-/zshsetup}/tests/lib.sh"
 is_musl || skip "musl only"
 setup_zshsetup
 ln -s "$ZSHSETUP_HOME/.zshrc" "$HOME/.zshrc"
-export ZSHSETUP_CHOICE=manual ZSHSETUP_REQUIRE_MICROMAMBA=1 ZSHSETUP_REQUIRE_RUSTUP=1 ZSHSETUP_REQUIRE_BUN=1
+export ZSHSETUP_CHOICE=manual ZSHSETUP_REQUIRE_MICROMAMBA=1 ZSHSETUP_REQUIRE_RUSTUP=1 ZSHSETUP_REQUIRE_BUN=1 \
+  ZSHSETUP_REQUIRE_MAKE=1
 
 check "the first shell start installs everything" zsh -i -c 'echo ready'
 check "no install failed" test ! -e "$ZSHSETUP_HOME/failed"
