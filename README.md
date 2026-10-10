@@ -70,21 +70,37 @@ python3 <(curl -fsSL https://gist.githubusercontent.com/muendelezaji/c14722ab66b
 
 - `update_zshsetup` pulls the latest version, upgrades pmg to its latest tag, updates the specs of
   pmg, upgrades the packages of pmg, and updates oh-my-zsh.
+
 - Once a day, a shell start pulls zshsetup and its plugins in the background, without asking for
   credentials; later shells get the changes. The packages of pmg stay with `update_zshsetup`.
+
 - A shell start installs all missing tools together: it asks for every choice first, then runs pmg
   once for the manual ones and each system package manager once for its packages.
+
 - `install_manual <package>...` installs packages with pmg, `uninstall_manual <package>...` removes
   them.
+
 - `pmg` is in `PATH` with completions, e.g. `pmg list`, `pmg use bat@v0.25.0`, or `pmg --help`.
+
 - `edit_zshsetup <pre|post> [plugin]` edits the local `preinit.zsh` or `postinit.zsh`, or the
   `preinit.sh` or `postinit.sh` of a plugin, with `$EDITOR` (or `micro`).
+
 - `showhist` prints the history with readable timestamps.
+
 - Local changes belong in `preinit.zsh` (before tools and oh-my-zsh) and `postinit.zsh` (after tools and oh-my-zsh).
-- Plugins are directories in `plugins/` (ignored by git), e.g. a clone of a private repository.
-  Their `bin/` is added to `PATH`, `preinit.sh` is sourced before the local `preinit.zsh`, and
-  `postinit.sh` before the local `postinit.zsh`. `update_zshsetup` pulls plugins that are git
-  clones.
+
+- Plugins are directories in `plugins/` (ignored by git), e.g. a clone of a private repository:
+
+  ```sh
+  git clone <repo-url> ~/.config/zshsetup/plugins/<name>
+  ```
+
+  Their `bin/` is added to `PATH`, files and directories in `config/` are linked into
+  `XDG_CONFIG_HOME` (existing files or directories are moved to `<name>.pre-zshsetup`, as is an
+  existing `~/.zshrc`), `preinit.sh` is sourced before the local `preinit.zsh`, and `postinit.sh`
+  before the local `postinit.zsh`. `update_zshsetup` pulls plugins that are git clones. Write a good
+  `.gitignore` for plugin repositories to avoid storing credentials, auth tokens, or private keys
+  that tools might save in their configuration directories.
 
 ## Packages
 
