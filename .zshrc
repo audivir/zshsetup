@@ -748,6 +748,9 @@ update_zshsetup() {
   __pull_plugins
   # the pulled .zshrc upgrades, as the functions of this shell may be from before the pull
   zsh "$ZSHSETUP_HOME/.zshrc" upgrade
+  if [[ -o interactive ]]; then
+    . "$HOME/.zshrc"
+  fi
 }
 
 # upgrades the packages of pmg and oh-my-zsh, after update_zshsetup pulled
