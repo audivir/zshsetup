@@ -486,6 +486,9 @@ __init_zshsetup_env() {
   # shellcheck disable=SC2034
   ZSH_THEME="robbyrussell"
 
+  # user bin before system PATH, but after toolchains and Homebrew
+  PATH="$HOME/bin:$PATH"
+
   # BEGIN HOMEBREW
   # before oh-my-zsh, whose compinit only sees the site-functions of Homebrew already in fpath
   if [ -f "/opt/homebrew/bin/brew" ]; then
@@ -521,10 +524,10 @@ __init_zshsetup_env() {
   # END JAVASCRIPT
 
   # SETUP PATH
-  PATH="$ZSHSETUP_HOME/bin:$XDG_BIN_HOME:$HOME/bin:$PATH"
-  # the bin directories of the plugins in plugins/
+  # zshsetup's own links (e.g. pmg) come first, then the bin directories of the plugins, then
+  # the commands of pmg in $XDG_BIN_HOME before those of Homebrew and the toolchains
   __plugin_paths bin
-  path=("${reply[@]}" "${path[@]}")
+  path=("$ZSHSETUP_HOME/bin" "${reply[@]}" "$XDG_BIN_HOME" "${path[@]}")
 
   # SETUP OTHER ENVIRONMENT
   export GNUPGHOME="$XDG_DATA_HOME/gnupg"
