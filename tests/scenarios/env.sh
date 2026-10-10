@@ -280,7 +280,7 @@ __require_uv_tool '$tool_arg'" 2>&1
 }
 
 out="$(run_require_uv fake-uv-pkg)"
-check "__require_uv_tool installs missing tool" contains "$out" "fake uv tool install fake-uv-pkg"
+check "__require_uv_tool installs missing tool" contains "$out" "fake uv tool install --force fake-uv-pkg"
 
 # already available tool is skipped
 touch "$fake_bin_dir/fake-uv-pkg" && chmod +x "$fake_bin_dir/fake-uv-pkg"

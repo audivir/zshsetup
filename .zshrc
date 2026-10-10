@@ -316,7 +316,7 @@ __require_uv_tool() {
     ((EPOCHSECONDS - failed_at < 86400)) && return 0
   fi
   echo "Installing $tool via uv tool..." >&2
-  if uv tool install "$tool"; then
+  if uv tool install --force "$tool"; then
     rehash
     rm -f "$marker"
     return 0
