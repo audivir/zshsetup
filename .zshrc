@@ -486,6 +486,40 @@ __init_zshsetup_env() {
   # shellcheck disable=SC2034
   ZSH_THEME="robbyrussell"
 
+  # BEGIN HOMEBREW
+  # before oh-my-zsh, whose compinit only sees the site-functions of Homebrew already in fpath
+  if [ -f "/opt/homebrew/bin/brew" ]; then
+    __source /opt/homebrew/bin/brew shellenv || return 1
+    alias homebrewupdate='brew update; brew upgrade --formulae --yes && brew cu --yes && cd /opt/homebrew && git stash pop &>/dev/null || true && cd -'
+  fi
+  # END HOMEBREW
+
+  # mandoc (Alpine) does not find man pages next to the bin dirs in PATH, the trailing colon keeps the defaults
+  export MANPATH="$XDG_DATA_HOME/man:"
+  # the environment and PATH entries of packages like go and rustup
+  [ -f "${PMG_HOME:-$XDG_DATA_HOME/pmg}/env.sh" ] && . "${PMG_HOME:-$XDG_DATA_HOME/pmg}/env.sh"
+
+  # BEGIN GO
+  # for go from other package managers, pmg sets GOROOT, GOPATH, and PATH in its env file
+  export GOPATH="${GOPATH:-$XDG_DATA_HOME/go}"
+  PATH="$GOPATH/bin:$PATH"
+  # END GO
+
+  # BEGIN RUST
+  # for rustup from other package managers, pmg sets RUSTUP_HOME, CARGO_HOME, and PATH in its env file
+  export RUSTUP_HOME="${RUSTUP_HOME:-$XDG_DATA_HOME/rustup}"
+  export CARGO_HOME="${CARGO_HOME:-$XDG_DATA_HOME/cargo}"
+  PATH="$CARGO_HOME/bin:/opt/homebrew/opt/rustup/bin:$PATH"
+  # END RUST
+
+  # BEGIN JAVASCRIPT
+  export BUN_INSTALL="$XDG_DATA_HOME/bun"
+  export BUN_INSTALL_CACHE_DIR="$XDG_CACHE_HOME/bun/install"
+  export BUN_RUNTIME_TRANSPILER_CACHE_PATH="$XDG_CACHE_HOME/bun/runtime"
+  export BUN_CONFIG_DIR="$XDG_CONFIG_HOME/bun"
+  PATH="$BUN_INSTALL/bin:$PATH"
+  # END JAVASCRIPT
+
   # SETUP PATH
   PATH="$ZSHSETUP_HOME/bin:$XDG_BIN_HOME:$HOME/bin:$PATH"
   # the bin directories of the plugins in plugins/
@@ -528,40 +562,7 @@ __init_zshsetup() {
   fpath=("$XDG_DATA_HOME/zsh/site-functions" "${fpath[@]}")
   # pmg writes its completion whenever it changes something, a system without changes gets it here
   [ -f "$XDG_DATA_HOME/zsh/site-functions/_pmg" ] || pmg completion >"$XDG_DATA_HOME/zsh/site-functions/_pmg"
-  # mandoc (Alpine) does not find man pages next to the bin dirs in PATH, the trailing colon keeps the defaults
-  export MANPATH="$XDG_DATA_HOME/man:"
-  # the environment and PATH entries of packages like go and rustup
-  [ -f "${PMG_HOME:-$XDG_DATA_HOME/pmg}/env.sh" ] && . "${PMG_HOME:-$XDG_DATA_HOME/pmg}/env.sh"
   # END PMG
-
-  # BEGIN HOMEBREW
-  # before oh-my-zsh, whose compinit only sees the site-functions of Homebrew already in fpath
-  if [ -f "/opt/homebrew/bin/brew" ]; then
-    __source /opt/homebrew/bin/brew shellenv || return 1
-    alias homebrewupdate='brew update; brew upgrade --formulae --yes && brew cu --yes && cd /opt/homebrew && git stash pop &>/dev/null || true && cd -'
-  fi
-  # END HOMEBREW
-
-  # BEGIN GO
-  # for go from other package managers, pmg sets GOROOT, GOPATH, and PATH in its env file
-  export GOPATH="${GOPATH:-$XDG_DATA_HOME/go}"
-  PATH="$GOPATH/bin:$PATH"
-  # END GO
-
-  # BEGIN RUST
-  # for rustup from other package managers, pmg sets RUSTUP_HOME, CARGO_HOME, and PATH in its env file
-  export RUSTUP_HOME="${RUSTUP_HOME:-$XDG_DATA_HOME/rustup}"
-  export CARGO_HOME="${CARGO_HOME:-$XDG_DATA_HOME/cargo}"
-  PATH="$CARGO_HOME/bin:/opt/homebrew/opt/rustup/bin:$PATH"
-  # END RUST
-
-  # BEGIN JAVASCRIPT
-  export BUN_INSTALL="$XDG_DATA_HOME/bun"
-  export BUN_INSTALL_CACHE_DIR="$XDG_CACHE_HOME/bun/install"
-  export BUN_RUNTIME_TRANSPILER_CACHE_PATH="$XDG_CACHE_HOME/bun/runtime"
-  export BUN_CONFIG_DIR="$XDG_CONFIG_HOME/bun"
-  PATH="$BUN_INSTALL/bin:$PATH"
-  # END JAVASCRIPT
 
   # BEGIN MISSING PACKAGES
   # all at once, once PATH has the dirs of Homebrew and the toolchains, where a tool may already
