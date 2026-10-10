@@ -100,7 +100,8 @@ python3 <(curl -fsSL https://gist.githubusercontent.com/muendelezaji/c14722ab66b
   existing `~/.zshrc`), `preinit.sh` is sourced before the local `preinit.zsh`, and `postinit.sh`
   before the local `postinit.zsh`. `update_zshsetup` pulls plugins that are git clones. Write a good
   `.gitignore` for plugin repositories to avoid storing credentials, auth tokens, or private keys
-  that tools might save in their configuration directories.
+  that tools might save in their configuration directories, and consider secret-checking hooks in
+  prek / pre-commit (such as `detect-private-key` or `gitleaks`) to prevent committing them.
 
 ## Packages
 
