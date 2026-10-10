@@ -236,4 +236,68 @@ rm -rf "$test_pkg_dir"
 out="$(choose ZSHSETUP_CHOICE=os FAKE_EXTERNAL=)"
 check "ZSHSETUP_CHOICE=os falls back to manual when no OS package exists" contains "$out" "fake install fake-pkg"
 
+# __extra_uv_tools loads tools from plugins/*/uv-tools and ZSHSETUP_REQUIRE_UV_TOOL_*
+test_uv_dir="$(mktemp -d)"
+mkdir -p "$test_uv_dir/plugins/my-plugin"
+cat >"$test_uv_dir/plugins/my-plugin/uv-tools" <<'EOF'
+# comment line
+tool-from-plugin
+  another-tool  # inline comment
+  shared-tool
+EOF
+# shellcheck disable=SC1083
+tools="$(env ZSHSETUP_HOME="$test_uv_dir" ZSHSETUP_REQUIRE_UV_TOOL_SHARED_TOOL=1 ZSHSETUP_REQUIRE_UV_TOOL_EXTRA_TOOL=1 zsh -c "$(zshrc_function __plugin_paths)
+$(zshrc_function __extra_uv_tools)
+__extra_uv_tools
+print -r -- "\${reply[@]}"")"
+check "__extra_uv_tools loads tools from plugins" contains "$tools" "tool-from-plugin"
+check "__extra_uv_tools loads inline-commented tool" contains "$tools" "another-tool"
+check "__extra_uv_tools includes ZSHSETUP_REQUIRE_UV_TOOL_* tools" contains "$tools" "extra-tool"
+check "__extra_uv_tools deduplicates shared tools" test "$(printf '%s\n' "$tools" | tr ' ' '\n' | grep -c '^shared-tool$')" -eq 1
+rm -rf "$test_uv_dir"
+
+# __require_uv_tool installs missing uv tools and records failures
+fake_uv_dir="$(mktemp -d)"
+cat >"$fake_uv_dir/uv" <<'EOF'
+#!/bin/sh
+if [ "$1" = tool ] && [ "$2" = install ]; then
+  shift 2
+  echo "fake uv tool install $*"
+  [ -z "${FAKE_UV_FAILS:-}" ]
+fi
+EOF
+chmod +x "$fake_uv_dir/uv"
+fake_bin_dir="$(mktemp -d)"
+test_home_dir="$(mktemp -d)"
+
+run_require_uv() {
+  tool_arg="$1"
+  shift
+  env PATH="$fake_bin_dir:$fake_uv_dir:$PATH" ZSHSETUP_HOME="$test_home_dir" "$@" zsh -c "$(zshrc_function __eprint)
+$(install_functions)
+$(zshrc_function __require_uv_tool)
+__require_uv_tool '$tool_arg'" 2>&1
+}
+
+out="$(run_require_uv fake-uv-pkg)"
+check "__require_uv_tool installs missing tool" contains "$out" "fake uv tool install fake-uv-pkg"
+
+# already available tool is skipped
+touch "$fake_bin_dir/fake-uv-pkg" && chmod +x "$fake_bin_dir/fake-uv-pkg"
+out="$(run_require_uv fake-uv-pkg)"
+check "__require_uv_tool skips available tool" test -z "$out"
+
+# disabled tool is skipped
+out="$(run_require_uv fake-disabled ZSHSETUP_DISABLE_FAKE_DISABLED=1)"
+check "__require_uv_tool skips disabled tool" test -z "$out"
+
+# failing tool records failure and is skipped on retry
+out="$(run_require_uv fake-fail FAKE_UV_FAILS=1)"
+check "__require_uv_tool warns on failure" contains "$out" "installing fake-fail via uv tool failed"
+check "__require_uv_tool creates failure marker" test -f "$test_home_dir/failed/fake-fail"
+out="$(run_require_uv fake-fail)"
+check "__require_uv_tool skips tool that failed within a day" test -z "$out"
+
+rm -rf "$fake_uv_dir" "$fake_bin_dir" "$test_home_dir"
+
 finish

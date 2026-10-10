@@ -98,7 +98,8 @@ python3 <(curl -fsSL https://gist.githubusercontent.com/muendelezaji/c14722ab66b
   Their `bin/` is added to `PATH`, files and directories in `config/` are linked into
   `XDG_CONFIG_HOME` (existing files or directories are moved to `<name>.pre-zshsetup`, as is an
   existing `~/.zshrc`), a `packages` file lists tools to require (one package name per line,
-  comments with `#` supported), `preinit.sh` is sourced before the local `preinit.zsh`, and `postinit.sh`
+  comments with `#` supported), a `uv-tools` file lists Python tools to install via `uv tool install`,
+  `preinit.sh` is sourced before the local `preinit.zsh`, and `postinit.sh`
   before the local `postinit.zsh`. `update_zshsetup` pulls plugins that are git clones. Write a good
   `.gitignore` for plugin repositories to avoid storing credentials, auth tokens, or private keys
   that tools might save in their configuration directories, and consider secret-checking hooks in
@@ -152,6 +153,7 @@ them to `preinit.zsh` for later shells.
   A `~/.cache/.zshsetup_do_not_use_scratch` file does the same.
 - `ZSHSETUP_REQUIRE_<PACKAGE>`: install a package that is not installed by default
   (e.g. `ZSHSETUP_REQUIRE_ZIG=1`, or `ZSHSETUP_REQUIRE_MICROMAMBA=1` on musl with a user-space glibc).
+- `ZSHSETUP_REQUIRE_UV_TOOL_<TOOL>`: install a Python tool via `uv tool install` (e.g. `ZSHSETUP_REQUIRE_UV_TOOL_RUFF=1`).
 - `ZSHSETUP_DISABLE_<PACKAGE>`: do not install a default package (e.g. `ZSHSETUP_DISABLE_BUN=1`);
   it is still installed when another package depends on it.
 - `PMG_GH_TOKEN`: GitHub token for the API requests of pmg, which are limited to 60 per hour

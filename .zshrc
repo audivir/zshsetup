@@ -274,6 +274,58 @@ __required_packages() {
   reply+=("${extra[@]}" bat micro)
 }
 
+# sets reply to the uv tools from ZSHSETUP_REQUIRE_UV_TOOL_* and plugins/*/uv-tools
+# shellcheck disable=SC2206,SC2296,SC2299
+__extra_uv_tools() {
+  local required_var tool_file line
+  local -a plugin_files
+  __plugin_paths uv-tools
+  plugin_files=("${reply[@]}")
+  reply=()
+  for required_var in ${(k)parameters[(I)ZSHSETUP_REQUIRE_UV_TOOL_*]}; do
+    [ -n "${(P)required_var}" ] && reply+=("${${${required_var#ZSHSETUP_REQUIRE_UV_TOOL_}:l}//_/-}")
+  done
+  for tool_file in "${plugin_files[@]}"; do
+    while IFS= read -r line || [ -n "$line" ]; do
+      line="${line%%#*}"
+      line="${line//[[:space:]]/}"
+      [ -n "$line" ] && reply+=("$line")
+    done <"$tool_file"
+  done
+  reply=(${(u)reply})
+  return 0
+}
+
+# installs a tool with uv tool install, skipping if available, disabled, or failed recently
+# shellcheck disable=SC2296,SC2299
+__require_uv_tool() {
+  local tool cmd disable_var marker failed_at
+  tool="$1"
+  cmd="${tool%%[@=><]*}"
+  __available "$cmd" && return 0
+  disable_var="ZSHSETUP_DISABLE_${${cmd:u}//-/_}"
+  [ -n "${(P)disable_var}" ] && return 0
+  __available uv || return 0
+  marker="$ZSHSETUP_HOME/failed/$cmd"
+  zmodload zsh/datetime
+  if [ -f "$marker" ]; then
+    failed_at="$(<"$marker")"
+    case "$failed_at" in
+      "" | *[!0-9]*) failed_at=0 ;;
+    esac
+    ((EPOCHSECONDS - failed_at < 86400)) && return 0
+  fi
+  echo "Installing $tool via uv tool..." >&2
+  if uv tool install "$tool"; then
+    rehash
+    rm -f "$marker"
+    return 0
+  fi
+  mkdir -p "${marker%/*}" && echo "$EPOCHSECONDS" >"$marker"
+  __eprint "zshsetup: installing $tool via uv tool failed, skipping it for a day"
+  return 1
+}
+
 __source() {
   local env
   env=$("$@") || return 1
@@ -597,6 +649,14 @@ __init_zshsetup() {
   done
   # END REQUIRED PACKAGES
 
+  # BEGIN UV TOOLS
+  local tool
+  __extra_uv_tools
+  for tool in "${reply[@]}"; do
+    __require_uv_tool "$tool"
+  done
+  # END UV TOOLS
+
   # BEGIN EXTRA TOOLS
   __require bat
   __require micro
@@ -708,6 +768,11 @@ __upgrade_zshsetup() {
   zmodload zsh/datetime
   omz_cache="${ZSH_CACHE_DIR:-$omz_dir/cache}"
   mkdir -p "$omz_cache" && echo "LAST_EPOCH=$((EPOCHSECONDS / 60 / 60 / 24))" >|"$omz_cache/.zsh-update"
+
+  # uv tools
+  if __available uv; then
+    uv tool upgrade --all || __eprint "Failed to upgrade uv tools"
+  fi
 }
 
 # installs packages with pmg, see pmg --help for all its commands
@@ -811,5 +876,5 @@ unfunction __assure_link __assure_dir __package_manager __last_match __pmg_insta
 unfunction __pull_daily
 unfunction __has_terminfo __fallback_term __init_cache __init_zshsetup_env __init_zshsetup __install_zshsetup __save_settings __upgrade_zshsetup
 unfunction __which __available __download __uv_libc __bootstrap_uv __has_metadata __system_install __clean_metadata __manager_available
-unfunction __install_chosen __install_main __link_plugin_configs
+unfunction __install_chosen __install_main __link_plugin_configs __extra_uv_tools __require_uv_tool
 unset __PMG_TAG __METADATA_CREATED
