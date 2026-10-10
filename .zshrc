@@ -5,7 +5,7 @@
 
 # drops duplicate PATH and FPATH entries, when .zshrc is sourced again
 # shellcheck disable=SC2034
-typeset -U path fpath
+typeset -gU path fpath
 
 __eprint() {
   echo "$1" >&2
@@ -748,8 +748,10 @@ update_zshsetup() {
   __pull_plugins
   # the pulled .zshrc upgrades, as the functions of this shell may be from before the pull
   zsh "$ZSHSETUP_HOME/.zshrc" upgrade
-  # shellcheck source=/dev/null
-  . "$HOME/.zshrc"
+  if [[ -o interactive ]]; then
+    # shellcheck source=/dev/null
+    . "$HOME/.zshrc"
+  fi
 }
 
 # upgrades the packages of pmg and oh-my-zsh, after update_zshsetup pulled
