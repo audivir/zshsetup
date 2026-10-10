@@ -770,7 +770,7 @@ __upgrade_zshsetup() {
   mkdir -p "$omz_cache" && echo "LAST_EPOCH=$((EPOCHSECONDS / 60 / 60 / 24))" >|"$omz_cache/.zsh-update"
 
   # uv tools
-  if __available uv; then
+  if command -v uv >/dev/null 2>&1; then
     uv tool upgrade --all || __eprint "Failed to upgrade uv tools"
   fi
 }
