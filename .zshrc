@@ -13,17 +13,24 @@ __eprint() {
 }
 
 __assure_link() {
-  local link_file expected_target
+  local link_file expected_target actual_target backup
   link_file="$1"
   expected_target="$2"
   if [ -L "$link_file" ]; then
     actual_target=$(readlink "$link_file") || return 1
     if [ "$actual_target" != "$expected_target" ]; then
-      __eprint "$link_file points to $actual_target. Rewriting to $expected_target..."
+      echo "$link_file points to $actual_target. Rewriting to $expected_target..." >&2
       ln -snf "$expected_target" "$link_file"
     fi
-  elif [ -d "$link_file" ] || [ -f "$link_file" ]; then
-    __eprint "$link_file is a directory or file, please backup and move it first"
+  elif [ -e "$link_file" ]; then
+    backup="$link_file.pre-zshsetup"
+    if [ -e "$backup" ] || [ -L "$backup" ]; then
+      __eprint "$link_file exists, but backup $backup already exists"
+      return 1
+    fi
+    echo "$link_file exists, moving to $backup..." >&2
+    mv "$link_file" "$backup" || return 1
+    ln -s "$expected_target" "$link_file"
   else
     ln -s "$expected_target" "$link_file"
   fi
@@ -301,6 +308,20 @@ __source_plugins() {
   return 0
 }
 
+# links the files and directories in config/ of each plugin in plugins/ into XDG_CONFIG_HOME
+__link_plugin_configs() {
+  setopt localoptions nullglob
+  local config_dir entry
+  __plugin_paths config
+  for config_dir in "${reply[@]}"; do
+    for entry in "$config_dir"/*; do
+      [ -e "$entry" ] || [ -L "$entry" ] || continue
+      __assure_link "$XDG_CONFIG_HOME/${entry##*/}" "$entry" || return 1
+    done
+  done
+  return 0
+}
+
 __init_cache() {
   local user_cache scratch_cache
   user_cache="$HOME/.cache"
@@ -420,6 +441,8 @@ __init_zshsetup() {
     "$ZSHSETUP_HOME/bin" "$XDG_DATA_HOME/zsh/site-functions"; do
     __assure_dir "$dir" || return 1
   done
+
+  __link_plugin_configs || return 1
 
   # BEGIN PMG
   # pmg installs the packages, see packages/pmg; completions call it by name, so it is linked into PATH
@@ -763,5 +786,5 @@ unfunction __assure_link __assure_dir __package_manager __last_match __pmg_insta
 unfunction __pull_daily
 unfunction __has_terminfo __fallback_term __init_cache __init_zshsetup_env __init_zshsetup __install_zshsetup __save_settings __upgrade_zshsetup
 unfunction __which __available __download __uv_libc __bootstrap_uv __has_metadata __system_install __clean_metadata
-unfunction __install_chosen __install_main
+unfunction __install_chosen __install_main __link_plugin_configs
 unset __PMG_TAG __METADATA_CREATED

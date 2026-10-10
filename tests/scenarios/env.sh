@@ -176,4 +176,39 @@ else
   check "plain xterm stays without an xterm-256color entry" test "$(term_after xterm)" = xterm
 fi
 
+# __assure_link backs up existing files/dirs to .pre-zshsetup and creates the link
+test_link_dir="$(mktemp -d)"
+target_file="$test_link_dir/target"
+link_file="$test_link_dir/link"
+echo "new content" >"$target_file"
+echo "original content" >"$link_file"
+env ZSHSETUP_HOME="$test_link_dir" zsh -c "$(zshrc_function __eprint)
+$(zshrc_function __assure_link)
+__assure_link '$link_file' '$target_file'" >/dev/null 2>&1
+check "__assure_link backs up an existing file to .pre-zshsetup" test -f "$link_file.pre-zshsetup"
+check "__assure_link backup preserves original content" grep -q "original content" "$link_file.pre-zshsetup"
+check "__assure_link creates the symlink" test -L "$link_file"
+check "__assure_link symlink points to expected target" test "$(readlink "$link_file")" = "$target_file"
+
+rm -f "$link_file"
+echo "existing again" >"$link_file"
+fail_out="$(env ZSHSETUP_HOME="$test_link_dir" zsh -c "$(zshrc_function __eprint)
+$(zshrc_function __assure_link)
+__assure_link '$link_file' '$target_file'" 2>&1 || true)"
+check "__assure_link fails if backup already exists" contains "$fail_out" "already exists"
+
+# __link_plugin_configs links config/ entries of plugins to XDG_CONFIG_HOME
+plugin_config_dir="$test_link_dir/plugins/test-plugin/config"
+mkdir -p "$plugin_config_dir/app1" "$plugin_config_dir/app2"
+xdg_config="$test_link_dir/xdg_config"
+mkdir -p "$xdg_config"
+env ZSHSETUP_HOME="$test_link_dir" XDG_CONFIG_HOME="$xdg_config" zsh -c "$(zshrc_function __eprint)
+$(zshrc_function __assure_link)
+$(zshrc_function __plugin_paths)
+$(zshrc_function __link_plugin_configs)
+__link_plugin_configs" >/dev/null 2>&1
+check "__link_plugin_configs links plugin config directories" test -L "$xdg_config/app1"
+check "__link_plugin_configs links point to plugin config" test "$(readlink "$xdg_config/app1")" = "$plugin_config_dir/app1"
+rm -rf "$test_link_dir"
+
 finish
