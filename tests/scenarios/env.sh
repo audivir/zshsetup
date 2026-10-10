@@ -130,8 +130,10 @@ chosen() { # package, names, then env assignments
 not_chosen() { ! chosen "$@"; }
 check "install.sh leaves ZSHSETUP_CHOICE=manual to pmg" not_chosen git 'apk git' ZSHSETUP_CHOICE=manual
 check "install.sh leaves a package without a name for the choice to pmg" not_chosen uv 'apk uv' ZSHSETUP_CHOICE=apt
+check "install.sh leaves ZSHSETUP_CHOICE=os without an available manager to pmg" not_chosen git 'fakeos git' ZSHSETUP_CHOICE=os
 if command -v apk >/dev/null 2>&1; then
   check "ZSHSETUP_CHOICE_TREE=apk installs tree with apk" chosen tree 'apk tree' ZSHSETUP_CHOICE_TREE=apk
+  check "ZSHSETUP_CHOICE_TREE=os installs tree with apk" chosen tree 'apk tree' ZSHSETUP_CHOICE_TREE=os
   check "apk keeps no index" test -z "$(ls -A /var/cache/apk 2>/dev/null)"
 fi
 if command -v dnf >/dev/null 2>&1; then
@@ -210,5 +212,28 @@ __link_plugin_configs" >/dev/null 2>&1
 check "__link_plugin_configs links plugin config directories" test -L "$xdg_config/app1"
 check "__link_plugin_configs links point to plugin config" test "$(readlink "$xdg_config/app1")" = "$plugin_config_dir/app1"
 rm -rf "$test_link_dir"
+
+# __extra_packages loads packages from plugins/*/packages and ZSHSETUP_REQUIRE_*
+test_pkg_dir="$(mktemp -d)"
+mkdir -p "$test_pkg_dir/plugins/my-plugin"
+cat >"$test_pkg_dir/plugins/my-plugin/packages" <<'EOF'
+# comment line
+pkg-from-plugin
+  another-pkg  # inline comment
+  shared-pkg
+EOF
+# shellcheck disable=SC1083
+pkgs="$(env ZSHSETUP_HOME="$test_pkg_dir" ZSHSETUP_REQUIRE_SHARED_PKG=1 ZSHSETUP_REQUIRE_EXTRA_TOOL=1 zsh -c "$(zshrc_function __plugin_paths)
+$(zshrc_function __extra_packages)
+__extra_packages
+print -r -- "\${reply[@]}"")"
+check "__extra_packages loads packages from plugins" contains "$pkgs" "pkg-from-plugin"
+check "__extra_packages loads inline-commented package" contains "$pkgs" "another-pkg"
+check "__extra_packages includes ZSHSETUP_REQUIRE_* packages" contains "$pkgs" "extra-tool"
+check "__extra_packages deduplicates shared packages" test "$(printf '%s\n' "$pkgs" | tr ' ' '\n' | grep -c '^shared-pkg$')" -eq 1
+rm -rf "$test_pkg_dir"
+
+out="$(choose ZSHSETUP_CHOICE=os FAKE_EXTERNAL=)"
+check "ZSHSETUP_CHOICE=os falls back to manual when no OS package exists" contains "$out" "fake install fake-pkg"
 
 finish

@@ -43,36 +43,46 @@ __assure_dir() {
 }
 
 # chooses the manager of a package from ZSHSETUP_CHOICE_<PACKAGE>, ZSHSETUP_CHOICE, or a menu, and
-# sets REPLY to it and reply to the names of the package there; manual installs with pmg, brew and
-# apt/apk with the names from the spec of the package
+# sets REPLY to it and reply to the names of the package there; os installs with the system
+# package manager (brew, apt, apk, dnf, yum) and manual with pmg
 # shellcheck disable=SC2206,SC2296,SC2299
 __choose_manager() {
-  local package choice choice_var manager name
+  local package choice choice_var manager name os_manager
   local -a options
   local -A names
   package="$1"
   choice_var="ZSHSETUP_CHOICE_${${package:u}//-/_}"
   choice="${(P)choice_var:-${ZSHSETUP_CHOICE:-}}"
+
+  if [[ "$OSTYPE" == darwin* ]]; then
+    __available brew && os_manager="brew"
+  else
+    if __available apt-get; then
+      os_manager="apt"
+    elif __available apk; then
+      os_manager="apk"
+    elif __available dnf; then
+      os_manager="dnf"
+    elif __available yum; then
+      os_manager="yum"
+    fi
+  fi
+
   options=()
   # manual needs no names from the spec, which would start pmg once more
   if [ "$choice" != manual ]; then
     while read -r manager name; do
       names[$manager]="$name"
     done < <(pmg external "$package" 2>/dev/null)
-    if [[ "$OSTYPE" == darwin* ]]; then
-      [ -n "${names[brew]}" ] && __available brew && options+=(brew)
-    else
-      [ -n "${names[apt]}" ] && __available apt-get && options+=(apt)
-      [ -n "${names[apk]}" ] && __available apk && options+=(apk)
-      [ -n "${names[dnf]}" ] && __available dnf && options+=(dnf)
-      # yum of Rocky Linux 8 and later is dnf
-      [ -n "${names[yum]}" ] && __available yum && ! __available dnf && options+=(yum)
+    if [ -n "$os_manager" ] && [ -n "${names[$os_manager]}" ]; then
+      options+=(os)
     fi
   fi
   options+=(manual)
 
   echo "Install $package via:" >&2
   if [ -n "$choice" ]; then
+    [ -n "$os_manager" ] && [ "$choice" = "$os_manager" ] && choice="os"
     # an unavailable choice (e.g. apt on macOS) falls back to manual
     ((${options[(Ie)$choice]})) || choice="manual"
   elif ((${#options} == 1)); then
@@ -102,9 +112,13 @@ __choose_manager() {
     return 1
   fi
   echo "$choice" >&2
-  REPLY="$choice"
-  # a spec may list several packages, e.g. "curl ca-certificates"
-  reply=(${=names[$choice]})
+  if [ "$choice" = "os" ]; then
+    REPLY="$os_manager"
+    reply=(${=names[$os_manager]})
+  else
+    REPLY="manual"
+    reply=()
+  fi
 }
 
 # installs a package with the manager __choose_manager chooses
@@ -228,14 +242,25 @@ __wants_micromamba() {
   [ -n "$ZSHSETUP_REQUIRE_MICROMAMBA" ] || { [ ! -e /lib/ld-musl-x86_64.so.1 ] && [ ! -e /lib/ld-musl-aarch64.so.1 ]; }
 }
 
-# sets reply to the non-default packages from ZSHSETUP_REQUIRE_<PACKAGE>, e.g. ZSHSETUP_REQUIRE_ZIG
-# shellcheck disable=SC2296,SC2299
+# sets reply to the non-default packages from ZSHSETUP_REQUIRE_<PACKAGE> and plugins/*/packages
+# shellcheck disable=SC2206,SC2296,SC2299
 __extra_packages() {
-  local required_var
+  local required_var pkg_file line
+  local -a plugin_pkgs
+  __plugin_paths packages
+  plugin_pkgs=("${reply[@]}")
   reply=()
   for required_var in ${(k)parameters[(I)ZSHSETUP_REQUIRE_*]}; do
     [ -n "${(P)required_var}" ] && reply+=("${${${required_var#ZSHSETUP_REQUIRE_}:l}//_/-}")
   done
+  for pkg_file in "${plugin_pkgs[@]}"; do
+    while IFS= read -r line || [ -n "$line" ]; do
+      line="${line%%#*}"
+      line="${line//[[:space:]]/}"
+      [ -n "$line" ] && reply+=("$line")
+    done <"$pkg_file"
+  done
+  reply=(${(u)reply})
   return 0
 }
 
@@ -785,6 +810,6 @@ __pull_daily
 unfunction __assure_link __assure_dir __package_manager __last_match __pmg_installed __require __source __source_plugins
 unfunction __pull_daily
 unfunction __has_terminfo __fallback_term __init_cache __init_zshsetup_env __init_zshsetup __install_zshsetup __save_settings __upgrade_zshsetup
-unfunction __which __available __download __uv_libc __bootstrap_uv __has_metadata __system_install __clean_metadata
+unfunction __which __available __download __uv_libc __bootstrap_uv __has_metadata __system_install __clean_metadata __manager_available
 unfunction __install_chosen __install_main __link_plugin_configs
 unset __PMG_TAG __METADATA_CREATED

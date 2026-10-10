@@ -246,6 +246,15 @@ __clean_metadata() {
   __METADATA_CREATED=""
 }
 
+# checks whether a system package manager is available
+__manager_available() {
+  case "$1" in
+    apt) __available apt-get ;;
+    brew | apk | dnf | yum) __available "$1" ;;
+    *) return 1 ;;
+  esac
+}
+
 # installs a package with the manager ZSHSETUP_CHOICE_<PACKAGE> or ZSHSETUP_CHOICE picks, if the
 # package has a name there; $2 has "manager names" lines, as pmg external prints them
 __install_chosen() { # package, names
@@ -254,7 +263,7 @@ __install_chosen() { # package, names
   eval "choice=\${$choice_var:-\${ZSHSETUP_CHOICE:-}}"
   [ -n "$choice" ] && [ "$choice" != manual ] || return 1
   while read -r manager names; do
-    if [ "$manager" = "$choice" ]; then
+    if [ "$manager" = "$choice" ] || { [ "$choice" = "os" ] && __manager_available "$manager"; }; then
       echo "Install $1 via $choice" >&2
       # a spec may list several packages, e.g. "curl ca-certificates"
       # shellcheck disable=SC2086

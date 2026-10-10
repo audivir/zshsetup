@@ -97,7 +97,8 @@ python3 <(curl -fsSL https://gist.githubusercontent.com/muendelezaji/c14722ab66b
 
   Their `bin/` is added to `PATH`, files and directories in `config/` are linked into
   `XDG_CONFIG_HOME` (existing files or directories are moved to `<name>.pre-zshsetup`, as is an
-  existing `~/.zshrc`), `preinit.sh` is sourced before the local `preinit.zsh`, and `postinit.sh`
+  existing `~/.zshrc`), a `packages` file lists tools to require (one package name per line,
+  comments with `#` supported), `preinit.sh` is sourced before the local `preinit.zsh`, and `postinit.sh`
   before the local `postinit.zsh`. `update_zshsetup` pulls plugins that are git clones. Write a good
   `.gitignore` for plugin repositories to avoid storing credentials, auth tokens, or private keys
   that tools might save in their configuration directories, and consider secret-checking hooks in
@@ -108,7 +109,7 @@ python3 <(curl -fsSL https://gist.githubusercontent.com/muendelezaji/c14722ab66b
 
 Installed by default (besides `zsh` and `git` from the installer): `oh-my-zsh`, `curl`, `uv`,
 `uvc`, `jq`, `gawk`, `micromamba` (not on musl), `bat`, `micro`, and `tzdata`.
-Add others with `ZSHSETUP_REQUIRE_<PACKAGE>`, or skip defaults with `ZSHSETUP_DISABLE_<PACKAGE>`;
+Add others with `ZSHSETUP_REQUIRE_<PACKAGE>` or via a plugin's `packages` file, or skip defaults with `ZSHSETUP_DISABLE_<PACKAGE>`;
 dependencies of installed packages are installed either way. `go`, `rustup`, and `bun` take long to
 install, so they need `ZSHSETUP_REQUIRE_GO`, `ZSHSETUP_REQUIRE_RUSTUP`, or `ZSHSETUP_REQUIRE_BUN`;
 their paths are set up either way. `kv` needs `ZSHSETUP_REQUIRE_KV`.
@@ -143,9 +144,9 @@ for `bun` on musl, and skips those the system already has.
 Set them already for the installation (e.g. `ZSHSETUP_CHOICE=manual sh`), the installer saves
 them to `preinit.zsh` for later shells.
 
-- `ZSHSETUP_CHOICE`: default package manager (`brew`, `apt`, `apk`, or `manual` for pmg) instead of
-  the menu.
-- `ZSHSETUP_CHOICE_<PACKAGE>`: package manager for a single package (e.g. `ZSHSETUP_CHOICE_CURL=apt`),
+- `ZSHSETUP_CHOICE`: default package manager (`os` for the system package manager like `brew`, `apt`,
+  `apk`, `dnf`, or `yum`, or `manual` for pmg) instead of the menu.
+- `ZSHSETUP_CHOICE_<PACKAGE>`: package manager for a single package (e.g. `ZSHSETUP_CHOICE_CURL=os`),
   overriding `ZSHSETUP_CHOICE`.
 - `ZSHSETUP_IGNORESCRATCH`: do not move the cache directory to `/scratch/$USER/.cache`.
   A `~/.cache/.zshsetup_do_not_use_scratch` file does the same.
