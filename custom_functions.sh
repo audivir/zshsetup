@@ -58,14 +58,6 @@ rm() {
   /bin/rm "$@"
 }
 
-# runs screen with our zsh, as SHELL is the login shell, which a zsh of zshsetup without chsh is not
-if command -v screen >/dev/null 2>&1; then
-  screen() {
-    # shellcheck disable=SC2154
-    SHELL="${commands[zsh]:-$SHELL}" command screen "$@"
-  }
-fi
-
 # shows the history with parsed unix timestamps
 showhist() {
   # zsh stores non-ASCII history as metafied bytes, which are no valid UTF-8
