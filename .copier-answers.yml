@@ -2,7 +2,7 @@
 _commit: e730ed7
 _src_path: gh:audivir/copier-template
 description: Cross-platform zsh dotfiles and package-manager bootstrap scripts
-github_org: audivir
+github_org: zshsetup
 project_name: zshsetup
 project_slug: zshsetup
 project_type: shell

@@ -7,7 +7,7 @@
 # the oldest tag of pmg zshsetup works with, which install.sh runs; packages/pmg installs the
 # latest tag and keeps an installed one while it is not older
 __PMG_TAG="v2.3.4"
-__PMG_REPO="https://github.com/audivir/pmg"
+__PMG_REPO="https://github.com/zshsetup/pmg"
 
 # checks whether the version of the tag $1 is at least that of $2, e.g. v1.10.0 and v1.9.2; in the
 # shell, as packages/pmg checks it on every call
@@ -354,7 +354,7 @@ __install_main() {
   if ! "$venv/bin/python" -c 'import shutil, ssl, sys, urllib.request, certifi
 context = ssl.create_default_context(cafile=certifi.where())
 shutil.copyfileobj(urllib.request.urlopen(sys.argv[1], context=context), sys.stdout.buffer)' \
-    https://github.com/audivir/zshsetup/raw/refs/heads/main/.zshrc >"$zshrc"; then
+    https://github.com/zshsetup/zshsetup/raw/refs/heads/main/.zshrc >"$zshrc"; then
     rm -f "$zshrc"
     echo "Failed to download .zshrc" >&2
     exit 1

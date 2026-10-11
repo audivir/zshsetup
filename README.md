@@ -4,7 +4,7 @@ Cross-platform zsh dotfiles with a package manager for tools in the home directo
 
 `.zshrc` sets up the XDG base directories, oh-my-zsh, and a set of command line tools. Missing
 tools are installed on shell start, either with Homebrew, APT, apk, or
-[pmg](https://github.com/audivir/pmg), a package manager for prebuilt binaries that needs no admin
+[pmg](https://github.com/zshsetup/pmg), a package manager for prebuilt binaries that needs no admin
 rights.
 
 ## Prerequisites
@@ -13,7 +13,7 @@ rights.
 - `uv`, `curl`, `wget`, `python3`, or `/usr/lib/apt/apt-helper` (Debian/Ubuntu), and `tar`
   (`git` is installed from prebuilt binaries if missing)
 - `sha256sum` (GNU coreutils, BusyBox) or `shasum` (macOS), unless `uv` is in `PATH`
-- `zsh` (installed to `~/.local` with pmg from [zsh-static](https://github.com/audivir/zsh-static) if missing)
+- `zsh` (installed to `~/.local` with pmg from [zsh-static](https://github.com/zshsetup/zsh-static) if missing)
 - Python 3.10 or newer for pmg, with the safe extraction of `tarfile` (3.10.12, 3.11.4, or newer),
   or else Python 3.12, which `uv` installs
 
@@ -28,7 +28,7 @@ Python for pmg, and pmg its own CA certificates, so no system certificates are n
 ## Installation
 
 ```bash
-(u="https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh" && if command -v uv >/dev/null 2>&1; then uv run --quiet --no-project --with certifi python -c 'import certifi, shutil, ssl, sys, urllib.request; res = urllib.request.urlopen(sys.argv[1], context=ssl.create_default_context(cafile=certifi.where())); shutil.copyfileobj(res, sys.stdout.buffer)' "$u"; elif command -v curl >/dev/null 2>&1; then curl -fsSL "$u"; elif command -v wget >/dev/null 2>&1; then wget -O - "$u"; elif command -v python3 >/dev/null 2>&1; then python3 -c 'import shutil, sys, urllib.request; res = urllib.request.urlopen(sys.argv[1]); shutil.copyfileobj(res, sys.stdout.buffer)' "$u"; elif [ -x /usr/lib/apt/apt-helper ]; then t=$(mktemp) && /usr/lib/apt/apt-helper -o Acquire::https::Verify-Peer=false download-file "$u" "$t" >/dev/null 2>&1 && cat "$t" && rm -f "$t"; fi) | sh
+(u="https://github.com/zshsetup/zshsetup/raw/refs/heads/main/install.sh" && if command -v uv >/dev/null 2>&1; then uv run --quiet --no-project --with certifi python -c 'import certifi, shutil, ssl, sys, urllib.request; res = urllib.request.urlopen(sys.argv[1], context=ssl.create_default_context(cafile=certifi.where())); shutil.copyfileobj(res, sys.stdout.buffer)' "$u"; elif command -v curl >/dev/null 2>&1; then curl -fsSL "$u"; elif command -v wget >/dev/null 2>&1; then wget -O - "$u"; elif command -v python3 >/dev/null 2>&1; then python3 -c 'import shutil, sys, urllib.request; res = urllib.request.urlopen(sys.argv[1]); shutil.copyfileobj(res, sys.stdout.buffer)' "$u"; elif [ -x /usr/lib/apt/apt-helper ]; then t=$(mktemp) && /usr/lib/apt/apt-helper -o Acquire::https::Verify-Peer=false download-file "$u" "$t" >/dev/null 2>&1 && cat "$t" && rm -f "$t"; fi) | sh
 ```
 
 This clones the repo to `~/.config/zshsetup` and links `~/.zshrc` to its `.zshrc`.
@@ -39,15 +39,15 @@ and needs the [GitHub CLI](https://cli.github.com):
 
 ```bash
 # Alpine (BusyBox wget)
-docker run -it --rm -e ZSHSETUP_CHOICE=manual -e GH_TOKEN="$(gh auth token)" alpine:3.22 sh -c 'wget -qO- https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh | sh && PATH="$HOME/.local/bin:$PATH" exec zsh'
+docker run -it --rm -e ZSHSETUP_CHOICE=manual -e GH_TOKEN="$(gh auth token)" alpine:3.22 sh -c 'wget -qO- https://github.com/zshsetup/zshsetup/raw/refs/heads/main/install.sh | sh && PATH="$HOME/.local/bin:$PATH" exec zsh'
 # Debian (apt-helper, as there is neither curl, wget, python3, nor CA certificates)
-docker run -it --rm -e ZSHSETUP_CHOICE=manual -e GH_TOKEN="$(gh auth token)" debian:stable-slim sh -c 't=$(mktemp) && /usr/lib/apt/apt-helper -o Acquire::https::Verify-Peer=false download-file https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh "$t" >/dev/null && sh "$t" && PATH="$HOME/.local/bin:$PATH" exec zsh'
+docker run -it --rm -e ZSHSETUP_CHOICE=manual -e GH_TOKEN="$(gh auth token)" debian:stable-slim sh -c 't=$(mktemp) && /usr/lib/apt/apt-helper -o Acquire::https::Verify-Peer=false download-file https://github.com/zshsetup/zshsetup/raw/refs/heads/main/install.sh "$t" >/dev/null && sh "$t" && PATH="$HOME/.local/bin:$PATH" exec zsh'
 # Ubuntu (apt-helper, as for Debian)
-docker run -it --rm -e ZSHSETUP_CHOICE=manual -e GH_TOKEN="$(gh auth token)" ubuntu:24.04 sh -c 't=$(mktemp) && /usr/lib/apt/apt-helper -o Acquire::https::Verify-Peer=false download-file https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh "$t" >/dev/null && sh "$t" && PATH="$HOME/.local/bin:$PATH" exec zsh'
+docker run -it --rm -e ZSHSETUP_CHOICE=manual -e GH_TOKEN="$(gh auth token)" ubuntu:24.04 sh -c 't=$(mktemp) && /usr/lib/apt/apt-helper -o Acquire::https::Verify-Peer=false download-file https://github.com/zshsetup/zshsetup/raw/refs/heads/main/install.sh "$t" >/dev/null && sh "$t" && PATH="$HOME/.local/bin:$PATH" exec zsh'
 # Rocky Linux 8 (curl)
-docker run -it --rm -e ZSHSETUP_CHOICE=manual -e GH_TOKEN="$(gh auth token)" rockylinux:8 sh -c 'curl -fsSL https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh | sh && PATH="$HOME/.local/bin:$PATH" exec zsh'
+docker run -it --rm -e ZSHSETUP_CHOICE=manual -e GH_TOKEN="$(gh auth token)" rockylinux:8 sh -c 'curl -fsSL https://github.com/zshsetup/zshsetup/raw/refs/heads/main/install.sh | sh && PATH="$HOME/.local/bin:$PATH" exec zsh'
 # CentOS 7 (curl, glibc 2.17)
-docker run -it --rm -e ZSHSETUP_CHOICE=manual -e GH_TOKEN="$(gh auth token)" centos:7 sh -c 'curl -fsSL https://github.com/audivir/zshsetup/raw/refs/heads/main/install.sh | sh && PATH="$HOME/.local/bin:$PATH" exec zsh'
+docker run -it --rm -e ZSHSETUP_CHOICE=manual -e GH_TOKEN="$(gh auth token)" centos:7 sh -c 'curl -fsSL https://github.com/zshsetup/zshsetup/raw/refs/heads/main/install.sh | sh && PATH="$HOME/.local/bin:$PATH" exec zsh'
 ```
 
 If `bash` is the login shell and cannot be changed, switch to `zsh` from `~/.bashrc`:
@@ -116,7 +116,7 @@ install, so they need `ZSHSETUP_REQUIRE_GO`, `ZSHSETUP_REQUIRE_RUSTUP`, or `ZSHS
 their paths are set up either way. `kv` needs `ZSHSETUP_REQUIRE_KV`.
 
 The specs of pmg for `bat`, `kv`, `micro`, and `uvc` are in `packages/specs/`, all others in
-[pmg-specs](https://github.com/audivir/pmg-specs): `bun`, `cc` (a C compiler through zig), `curl`,
+[pmg-specs](https://github.com/zshsetup/pmg-specs): `bun`, `cc` (a C compiler through zig), `curl`,
 `gawk`, `git`, `glibc`, `go`, `jq`, `make`, `micromamba`, `musl`, `musl-libs`, `patchelf`,
 `rustup`, `tzdata`, `uv`, `zig`, `zsh`, and `zstd`. pmg installs dependencies like `cc` for `rustup` or `musl-libs`
 for `bun` on musl, and skips those the system already has.
@@ -137,7 +137,7 @@ for `bun` on musl, and skips those the system already has.
   where the system cannot run the gnu builds. `kv` (2.39) uses its dynamic musl build, as it loads
   pdfium at runtime, with the loader of the `musl` package set by `patchelf`.
 - Without system CA certificates, `GIT_SSL_CAPATH` and `MAMBA_SSL_VERIFY` point `git` and
-  `micromamba` at the Mozilla certificates bundled with [git-static](https://github.com/audivir/git-static).
+  `micromamba` at the Mozilla certificates bundled with [git-static](https://github.com/zshsetup/git-static).
 - A failed install is skipped for a day (see `failed/`); retry with `install_manual <package>`.
 
 ## Environment Variables

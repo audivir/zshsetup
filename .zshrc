@@ -448,7 +448,7 @@ __fallback_term() {
 
 # inits the environment before running any failable commands
 __init_zshsetup_env() {
-  export ZSHSETUP_REPO="${ZSHSETUP_REPO:-https://github.com/audivir/zshsetup}"
+  export ZSHSETUP_REPO="${ZSHSETUP_REPO:-https://github.com/zshsetup/zshsetup}"
   export ZSHSETUP_HOME="$HOME/.config/zshsetup"
 
   # SETUP XDG SPEC

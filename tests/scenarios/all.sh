@@ -21,7 +21,7 @@ run() {
   check "$1 runs" zsh -i -c "$2"
 }
 run curl "curl --version"
-run git "git ls-remote https://github.com/audivir/zshsetup HEAD"
+run git "git ls-remote https://github.com/zshsetup/zshsetup HEAD"
 run zig "zig version"
 run make "make --version"
 run gawk "gawk --version"
